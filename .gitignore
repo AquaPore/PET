@@ -1,1 +1,29 @@
-/Manifest*.toml
+# Packaging stuff
+*.jl.*.cov
+*.jl.cov
+*.jl.mem
+*.jl.*.mem
+
+# pixi environments
+.pixi
+
+# Joseph
+/src/Data
+src/Data
+/docs/
+.gitignore
+Manifest.toml
+Project.toml
+# *.toml
+/Data/
+# Manifest.*
+# Project.*
+/Data
+Data
+Data/*
+*.[src/Data]
+**/Data
+# *.[.toml]
+
+PET_Vscode.jl.code-workspace
+

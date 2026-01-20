@@ -3,12 +3,10 @@
 # =============================================================
 module evapoFunc
 
-
 	# =============================================================
 	#		module: aerodynamic
 	# =============================================================
 	module aerodynamic
-
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION :Rₐ_INV
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,7 +28,6 @@ module evapoFunc
 			k [m] von Karman's constant, 0.41 [-],
 		"""
 		function Rₐ_INV_AERODYNAMIC_RESISTANCE(;Hcrop, Karmen, Wind, Z_Humidity, Z_Wind)
-
 			#------------------------------
 				function Z_ZERO_PLANE(Hcrop)
 					Z_0 = (2.0 / 3.0) * Hcrop
@@ -72,11 +69,11 @@ module evapoFunc
 		#		FUNCTION :  Rₛ_SURFACE_RESISTANCE
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
-			Rₛ: [s m⁻¹] SURFACE RESISTANCE
+		Rₛ: [s m⁻¹] SURFACE RESISTANCE
 
-			INPUT:
-				R_Stomatal: [s m⁻¹] bulk stomatal resistance of the well-illuminated leaf
-				Hcrop: [m] height of the crop
+		INPUT:
+			* R_Stomatal: [s m⁻¹] bulk stomatal resistance of the well-illuminated leaf,
+			* Hcrop: [m] height of the crop
 		"""
 			function Rₛ_SURFACE_RESISTANCE(;R_Stomatal, Hcrop)
 				LAI = min(24.0 * Hcrop, 5.0)
@@ -90,101 +87,116 @@ module evapoFunc
 	end  # module: aerodynamic
 	# ............................................................
 
+	# =============================================================
+	#		module: psychometric
+	# =============================================================
+	module psychometric
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : ATMOSPHERIC_PRESSURE
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			function ATMOSPHERIC_PRESSURE(;Z_Altitude)
+				P = 101.3 * ((293.0 - 0.0065 * Z_Altitude) / 293 ) ^ 5.26
+			return P
+			end  # function: ATMOSPHERIC_PRESSURE
+		# ------------------------------------------------------------------
 
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : ATMOSPHERIC_PRESSURE
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function ATMOSPHERIC_PRESSURE(;Z_Altitude)
-			P = 101.3 * ((293.0 - 0.0065 * Z_Altitude) / 293 ) ^ 5.26
-		return P
-		end  # function: ATMOSPHERIC_PRESSURE
-	# ------------------------------------------------------------------
 
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : γ_PSYCHROMETRIC
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : γ_PSYCHROMETRIC
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
 		γ PSYCHROMETRIC CONSTANT [kPa °C-1],
+		The specific heat at constant pressure is the amount of energy required to increase the temperature of a unit mass of air by one degree at constant pressure.
 
 		INPUT:
 		P atmospheric pressure [kPa],
 
 		CONSTANTS:
-			λ: [MJ kg-1] latent heat of vaporization, 2.45 ,
-			cp: [MJ kg-1 °C-1] specific heat at constant pressure, 1.013 10-3 ,
-			ε: ratio molecular weight of water vapour/dry air = 0.622.
-
+			* λ: [MJ kg-1] latent heat of vaporization, 2.45 ,
+			* Cp: [MJ kg-1 °C-1] specific heat at constant pressure, 1.013 10-3 ,
+			* ε: ratio molecular weight of water vapour/dry air = 0.622.
 		"""
+			function γ_PSYCHROMETRIC(;Cₚ, P, ϵ, λ)
+				γ = (Cₚ * P) /  (ϵ * λ)
+			return γ
+			end  # function: ϵ
+		# ------------------------------------------------------------------
+	end  # module: psychometric
+	# ............................................................
 
 
-		function γ_PSYCHROMETRIC(;Cp, P, ϵ, λ)
-			γ = (Cp * P) /  (ϵ * λ)
-		return γ
-		end  # function: ϵ
-	# ------------------------------------------------------------------
+	# =============================================================
+	#		module: humidity
+	# =============================================================
+	module humidity
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Eᴼ_SATURATED_VAPOUR_PRESSURE
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"""
+		Eᴼ(T) [kPa]: saturation vapour pressure at the air temperature
+		"""
+			function Eᴼ_SATURATION_VAPOUR_PRESSURE(;T)
+				Eᴼ = 0.6108 * exp(17.27 * T / (T + 237.3))
+			return Eᴼ
+			end  # function: SATURATED_VAPOUR_PRESSURE
+		# ------------------------------------------------------------------
 
 
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Ea_ACTUAL_VAPOUR_PRESSURE_RH
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"""
+		Eₐ [kPa] ACTUAL VAPOUR PRESSURE
+
+		INPUT
+		RelativeHumidity: [0-1  degree of saturation of the air (eₐ) to the saturation (eₛ =eₒ(T)) vapour pressure at the same temperature (T):
+		"""
+			function Ea_ACTUAL_VAPOUR_PRESSURE_RH(;RelativeHumidity, Eₛ)
+				Eₐ = 	RelativeHumidity * Eₛ
+				@assert RelativeHumidity ≤ 1.0
+				@assert Eₛ ≥ Eₐ
+			return Eₐ
+			end  # function: Ea_ACTUAL_VAPOUR_PRESSURE_RH
+		# ------------------------------------------------------------------
 
 
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Δ_SATURATION_VAPOUR_P_CURVE
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			"""
+			Δ: [kPa °C-1] SLOPE OF SATURATION VAPOUR PRESSURE CURVE AT AIR TEMPERATURE T ,
+			slope of the relationship between saturation vapour pressure and temperature
+			"""
+			function Δ_SATURATION_VAPOUR_P_CURVE(;T)
+				Δ = 4098.0 *0.6108 * exp(17.27 * T / (T + 237.3)) / (T + 237.3) ^ 2
+			return Δ
+			end  # function: Δ_SATURATION_VAPOUR_P_CURVE
+		# ------------------------------------------------------------------
 
 
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Ea_2_Tdew
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		""" not used """
+			function Eₐ_2_Tdew(;Eₐ)
+				P₁ = (1.0 / 17.27) * log(Eₐ / 0.6108)
+				Tdew = 237.3 * P₁ / (1.0 - P₁)
+			return Tdew
+			end  # function: Ea_2_Tdew
+		# ------------------------------------------------------------------
 
 
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : Eᴼ_SATURATED_VAPOUR_PRESSURE
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function Eᴼ_SATURATED_VAPOUR_PRESSURE(;T)
-			Eᴼ = 0.6108 * exp(17.27 * T / (T + 237.3))
-		return Eᴼ
-		end  # function: SATURATED_VAPOUR_PRESSURE
-	# ------------------------------------------------------------------
-
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : Ea_ACTUAL_VAPOUR_PRESSURE_RH
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function Ea_ACTUAL_VAPOUR_PRESSURE_RH(;RelativeHumidity, Eₛ)
-			Ea = 	RelativeHumidity * Eₛ
-			# @assert Ea ≤ 1.0
-			@assert Eₛ ≥ Ea
-		return Ea
-		end  # function: Ea_ACTUAL_VAPOUR_PRESSURE_RH
-	# ------------------------------------------------------------------
-
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : Ea_ACTUAL_VAPOUR_PRESSURE_RH
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function Ea_ACTUAL_VAPOUR_PRESSURE_Tdew(;Tdew)
-			Eₐ = 0.6108 * exp((17.27 * Tdew)/(Tdew + 237.3))
-		return Eₐ
-		end  # function: Ea_ACTUAL_VAPOUR_PRESSURE_RH
-	# ------------------------------------------------------------------
-
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : Ea_2_Tdew
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function Ea_2_Tdew(Eₐ)
-			D = (1 / 17.27) * log(Eₐ / 0.6108)
-			C =237.3
-			Tdew = C * D / (1.0 - D)
-		return Tdew
-		end  # function: Ea_2_Tdew
-	# ------------------------------------------------------------------
-
-
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : Δ_SATURATION_VAPOUR_P_CURVE
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function Δ_SATURATION_VAPOUR_P_CURVE(T)
-			ΔP = 4098 *0.6108 * exp(17.27 * T / (T + 237.3)) / (T + 237.3) ^ 2
-		return ΔP
-		end  # function: Δ_SATURATION_VAPOUR_P_CURVE
-	# ------------------------------------------------------------------
-
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Ea_ACTUAL_VAPOUR_PRESSURE_RH
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			""" not used """
+			function Eₐ_ACTUAL_VAPOUR_PRESSURE_Tdew(;Tdew)
+				Eₐ = 0.6108 * exp((17.27 * Tdew)/(Tdew + 237.3))
+			return Eₐ
+			end  # function: Ea_ACTUAL_VAPOUR_PRESSURE_RH
+		# ------------------------------------------------------------------
+	end  # module: humidity
+	# ............................................................
 
 
 	# =============================================================
@@ -193,9 +205,9 @@ module evapoFunc
 	module radiation
 		using Dates
 
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#		FUNCTION : Extraterrestrial_radiation
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Extraterrestrial_radiation
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""Estimate daily extraterrestrial radiation (*Ra*, 'top of the atmosphere
 		radiation').
 
@@ -216,93 +228,132 @@ module evapoFunc
 		:param ird: Inverse relative distance earth-sun [dimensionless]. Can be
 			calculated using ``inv_rel_dist_earth_sun()``.
 		:return: Daily extraterrestrial radiation [MJ m-2 day-1]
-		:rtype: float
+
+		* Rₐ [MJ m-2 hour-1] EXTRATERRESTRIAL RADIATION IN THE HOUR (OR SHORTER) PERIOD ,
+
+		INPUT
+			* Gsc: [MJ m-2 min-1] solar constant = 0.0820 ,
+			* Dₑₛ: [m] inverse relative distance Earth-Sun (Equation 23),
+			* δ: solar declination [rad] (Equation 24),
+			* ϕ: latitude [rad] (Equation 22),
+			* ω1 [rad]: solar time angle at beginning of period [rad] (Equation 29),
+			* ω2 [rad]: solar time angle at end of period  (Equation 30).
+			* ΔT [hour] time step
+			* Longitude_ᴼ : Longitude of the measured site [degress west of Greenwish]
+			* longitude of the measurement site [degrees west of Greenwich]
+
+			PROCESS
+			ω [rad] solar time angle at midpoint of hourly or shorter period [rad]
+			ωₛ [rad] sunset hour angle
+
 		"""
 
-		function  Rₐ_EXTRATERRESTRIAL_RADIATION_HOURLY(;Gsc, Latitude, Date)
+		function  Rₐ_EXTRATERRESTRIAL_RADIATION_HOURLY(;Gsc, Longitude_ᴼ, Latitude_Minute, Date, ΔT=1.0, Latitude_ᴼ, Lz= 0.0)
 
-			Latitude_Radian = Latitude * π/180
-
-			DayOfYear = Dates.dayofyear(Date)
-
-			Hour = Dates.hour(Date)
-
-			dᵣ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear) = 1.0 + 0.033 * cos(DayOfYear * 2.0 * π / 365.0)
-			dᵣ = dᵣ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear)
+         Latitude_Radian = (Latitude_ᴼ + Latitude_Minute / 60.0) * π/180
+         DayOfYear       = Dates.dayofyear(Date)
+         Hour            = Dates.hour(Date)
 
 			δ_SOLAR_INCLINATION(DayOfYear) = 0.409 * sin(DayOfYear * 2.0 * π / 365.0 - 1.39)
 			δ = δ_SOLAR_INCLINATION(DayOfYear)
 
-			# ω_SOLAR_TIME_ANGLE(Latitude_Radian, δ) = acos(-tan(Latitude_Radian) * tan(δ))
+			function ω_SOLAR_TIME_ANGLE_DAY(;Hour, DayOfYear, ΔT, δ)
+            ωₛ  = acos(-tan(Latitude_Radian) * tan(δ))
+			return ωₛ
+			end #  ω_SOLAR_TIME_ANGLE
 
-			b = 2* π * (DayOfYear - 81) /364
+			function ω_SOLAR_TIME_ANGLE_HOUR(;Hour, DayOfYear, ΔT)
+				# ωday_SOLAR_TIME_ANGLE(Latitude_Radian, δ) = acos(-tan(Latitude_Radian) * tan(δ))
+            B  = 2 * π * (DayOfYear - 81) / 364
+            Sc = 0.1645 * sin(2*B) - 0.1255 * cos(B) - 0.025 * sin(B)
+            ω  = ((Hour + 0.06667 * (Lz - Longitude_ᴼ) * Sc ) - 12.0) * π / 12.0
 
-			Sc = 0.1645 * sin(2*b) - 0.1255 * cos(b) - 0.025 * sin(b)
+				ω₁ = ω - π * ΔT / 24.0
+				ω₂ = ω + π * ΔT / 24.0
+			return ω₁, ω₂
+			end #  ω_SOLAR_TIME_ANGLE
 
-			ωₛ_SOLAR_TIME_ANGLE(Hour, Sc) = ((Hour + Sc ) -12.0) * π / 12.0
+			ω₁, ω₂ = ω_SOLAR_TIME_ANGLE_HOUR(Hour, DayOfYear, ΔT)
 
-			ωₛ = ωₛ_SOLAR_TIME_ANGLE(Hour, Sc)
+			Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear) = 1.0 + 0.033 * cos(DayOfYear * 2.0 * π / 365.0)
+			Dₑₛ = Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear)
 
-			ω₂ =
-			ω₁ =
 
-		Rₐ = (12.0 * 60.0 / π) * Gsc * dᵣ * (ω₂ - ω₁) * sin(Latitude_Radian) * sin(δ) + cos(Latitude_Radian) * cos(δ) * (sin(ω₂)- sin(ω₁))
 
-		return
+			Rₐ = (12.0 * 60.0 / π) * Gsc * Dₑₛ * (ω₂ - ω₁) * sin(Latitude_Radian) * sin(δ) + cos(Latitude_Radian) * cos(δ) * (sin(ω₂)- sin(ω₁))
+		return Rₐ
 		end  # function: Extraterrestrial_radiation
 	# ------------------------------------------------------------------
 
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		#		FUNCTION : Rso_CLEAR_SKY_RADIATION
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function Rso_CLEAR_SKY_RADIATION(;Rₐ, Z_Altitude)
-				Rₛₒ = (0.75 + 2.0E-5 * Z_Altitude) * Rₐ
-			return Rₛₒ
-			end  # function: Rso_CLEAR_SKY_RADIATION
-		# ------------------------------------------------------------------
-
-
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		#		FUNCTION : Rₙₛ_NET_SHORTWAVE_RADIATION
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function Rₙₛ_NET_SHORTWAVE_RADIATION(;α, Rₛ)
-			"""The net shortwave radiation resulting from the balance between incoming and reflected solar radiation
-				* α albedo or canopy reflection coefficient, which is 0.23 for the hypothetical grass reference crop [dimensionless]"""
-
-				Rₙₛ = (1.0 - α ) * Rₛ
-			return Rₙₛ
-			end  # function: Rₙₛ_NET_SHORTWAVE_RADIATION
-		# ------------------------------------------------------------------
-
-
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : Rₙₗ_LONGWAVE RADIATION
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function Rₙₗ_LONGWAVE_RADIATION(;σ, T_Min, T_Max, eₐ, Rₛ, Rₛₒ, T_Kelvin )
-				T1 = (σ * ((T_Kelvin + T_Max)^4 + (T_Kelvin + T_Min)^4) / 2.0)
+		"""
+		Rₙₗ: [MJ m-2 day-1] NET OUTGOING LONGWAVE RADIATION.
+
+		INPUT
+			* σ: [MJ K-4 m-2 day-1] Stefan-Boltzmann constant [ 4.903 10-9 ];
+			* T_max: [ᵒC] maximum  temperature during the 24-hour period,
+			* T_min: [ᵒC] minimum temperature during the 24-hour period;
+			* eₐ: [kPa] actual vapour pressure;
+			* Rₛ: [MJ m-2 day-1] measured solar radiation;
+
+		PROCESSES
+			* Rₛₒ[MJ m-2 day-1]: clear-sky radiation.
+
+		Rₛ/Rₛₒ relative shortwave radiation (limited to ≤ 1.0),
+		"""
+			function Rₙₗ_LONGWAVE_RADIATION(;σ, T_Min, T_Max, eₐ, Rₛ, T_Kelvin, Rₐ, Z_Altitude)
+
+				function Rₛₒ_CLEAR_SKY_RADIATION(;Rₐ, Z_Altitude)
+					Rₛₒ = (0.75 + 2.0E-5 * Z_Altitude) * Rₐ
+				return Rₛₒ
+
+				T₁ = (σ * ((T_Kelvin + T_Max)^4 + (T_Kelvin + T_Min)^4) / 2.0)
 
 				# Correction for air humidity
-				T2 = (0.34 - (0.14 * √eₐ))
+					T₂ = (0.34 - (0.14 * √eₐ))
 
-				# Correction fro effect of cloundiness
-				T3 = (1.35 * min(Rₛ / Rₛₒ, 1.0) - 0.35)
-				Rₙₗ =  T1 * T2 * T3
+				# Correction for effect of cloundiness
+					Rₛₒ = Rₛₒ_CLEAR_SKY_RADIATION(;Rₐ, Z_Altitude)
+					T₃ = (1.35 * min(Rₛ / Rₛₒ, 1.0) - 0.35)
+
+				Rₙₗ =  T₁ * T₂ * T₃
 			return Rₙₗ
 			end  # function: Rₙₗ_LONGWAVE RADIATION
 		# ------------------------------------------------------------------
 
 
-
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : Rₙ_NET_RADIATION
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function Rₙ_NET_RADIATION(Rₙₗ, Rₙₛ)
-				Rₙ = Rₙₛ + Rₙₗ
+		"""
+		Rₙ [MJ m-2 day-1] NET RADIATION AT THE CROP SURFACE
+
+		INPUT
+			* Rₙₛ: [MJ m-2 day-1] Incoming net shortwave radiation,
+		 	* Rₙₗ: [MJ m-2 day-1] Outgoing net longwave radiation.
+
+		PARAMETER
+			* α: [-] albedo or canopy reflection coefficient, which is 0.23 for the hypothetical grass reference crop
+
+		PROCESSES
+			* Rₙₛ: [MJ m-2 day-1] net shortwave radiation resulting from the balance between incoming and reflected solar radiation
+
+		"""
+			function Rₙ_NET_RADIATION(;Rₙₗ, α, Rₛ)
+
+				function Rₙₛ_NET_SHORTWAVE_RADIATION(;α, Rₛ)
+					Rₙₛ = (1.0 - α ) * Rₛ
+				return Rₙₛ
+				end  # function: Rₙₛ_NET_SHORTWAVE_RADIATION
+
+		 		Rₙₛ = Rₙₛ_NET_SHORTWAVE_RADIATION(;α, Rₛ)
+
+				Rₙ = Rₙₛ - Rₙₗ
 			return Rₙ
-			end  # function: RN
+			end  # function: Rₙ_NET_RADIATION
 		# ------------------------------------------------------------------
-
-
 
 	end  # module: radiation
 	# ............................................................

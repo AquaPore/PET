@@ -23,7 +23,7 @@ module readtoml
 	end # STRUCT PARAM
 
 	@option mutable struct CST
-      Cp       :: Float64
+      Cₚ       :: Float64
       Gsc      :: Float64
 		Karmen   :: Float64
       T_Kelvin :: Float64

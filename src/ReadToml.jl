@@ -22,7 +22,7 @@ module readtoml
 		Z_Wind           :: Float64
 	end # STRUCT PARAM
 
-	@option mutable struct CST
+	@option struct CST
       Cₚ       :: Float64
       Gsc      :: Float64
 		Karmen   :: Float64
@@ -31,6 +31,7 @@ module readtoml
       λ        :: Float64
       σ        :: Float64
       ϵ        :: Float64
+		ℜ       :: Float64
 	end # struct CST
 
 	@option mutable struct OPTION

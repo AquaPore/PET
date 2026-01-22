@@ -2,6 +2,24 @@
 #		module: evapoFunc
 # =============================================================
 module evapoFunc
+	# =============================================================
+	#		module: penmanmonteith
+	# =============================================================
+	module penmanmonteith
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : PENMAN_MONTEITH_HOURLY
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			function PET_PENMAN_MONTEITH_HOURLY(; Cₚ, eₐ, eₛ, G, Rₐ_Inv, Rₙ, Rₛ, γ, Δ, λ, ρₐᵢᵣ)
+
+				ETₒ = (1.0 / λ) * (Δ * (Rₙ - G) + ρₐᵢᵣ * Cₚ * (eₛ - eₐ) * Rₐ_Inv) / (Δ + γ * (1.0 + Rₛ *  Rₐ_Inv))
+
+			return ETₒ
+			end  # function: PENMAN_MONTEITH_HOURLY
+		# ------------------------------------------------------------------
+
+	end  # module: penmanmonteith
+	# ............................................................
 
 	# =============================================================
 	#		module: aerodynamic
@@ -33,19 +51,21 @@ module evapoFunc
 					Z_0 = (2.0 / 3.0) * Hcrop
 				return Z_0
 				end
-			#------------------------------
+			#..............................
+
 			#------------------------------
 				function Z_ROUGHNESS_MOMENTUM(Hcrop)
 					Z_RoughnessMomentum = 0.123 * Hcrop
 				return Z_RoughnessMomentum
 				end  # function: Z_ROUGHNESS_MOMENTUM
-			#------------------------------
+			#.....................................
+
 			#------------------------------
 				function Z_ROUGHNESS_TRANSFER(Z_RoughnessMomentum)
 					Z_RoughnessTransfer = 0.1 * Z_RoughnessMomentum
 					return Z_RoughnessTransfer
 				end  # function: Z_ROUGHNESSMOMENTUM
-			#------------------------------
+			#........................................
 
 			Z_0 = Z_ZERO_PLANE(Hcrop)
 			Z_RoughnessMomentum = Z_ROUGHNESS_MOMENTUM(Hcrop)
@@ -87,10 +107,11 @@ module evapoFunc
 	end  # module: aerodynamic
 	# ............................................................
 
+
 	# =============================================================
 	#		module: psychometric
 	# =============================================================
-	module psychometric
+	module physics
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : ATMOSPHERIC_PRESSURE
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -121,7 +142,25 @@ module evapoFunc
 			return γ
 			end  # function: ϵ
 		# ------------------------------------------------------------------
-	end  # module: psychometric
+
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : ρₐᵢᵣ_AIR_DENSITY
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"""
+		ρₐᵢᵣ MEAN AIR DENSITY AT CONSTANT PRESSURE [kg m-3]
+
+		INPUT:
+			* P: [kPa] Atmospheric pressure,
+			* T_Kelvin: constant Conversion from C to Kelvin,
+			* ℜ: [ kJ kg-1 K-1] constantspecific gas constant
+		"""
+			function ρₐᵢᵣ_AIR_DENSITY(;P, T, T_Kelvin, ℜ)
+				ρₐᵢᵣ = P / (ℜ * (T_Kelvin + T))
+			return ρₐᵢᵣ
+			end  # function: ρₐᵢᵣ_AIR_DENSITY
+			# ------------------------------------------------------------------
+	end  # module: physics
 	# ............................................................
 
 
@@ -195,6 +234,7 @@ module evapoFunc
 			return Eₐ
 			end  # function: Ea_ACTUAL_VAPOUR_PRESSURE_RH
 		# ------------------------------------------------------------------
+
 	end  # module: humidity
 	# ............................................................
 
@@ -203,32 +243,65 @@ module evapoFunc
 	#		module: radiation
 	# =============================================================
 	module radiation
-		using Dates
+		using Dates, SolarPosition, Dates
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION :  ωₛ_SUNSET_HOUR_ANGLE
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			function ωₛ_SUNSET_HOUR_ANGLE(;Latitude_Radian, δ)
+            ωₛ  = acos(-tan(Latitude_Radian) * tan(δ))
+			return ωₛ
+			end # ωₛ_SUNSET_HOUR_ANGLE
+		# ------------------------------------------------------------------
+
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION :  N_HOURS_DAYLIGHT
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			function N_HOURS_DAYLIGHT(;ωₛ)
+            Ndaylight = 2.0 * 24.0 * ωₛ / (2.0 * π)
+			return Ndaylight
+			end # N_HOURS_DAYLIGHT
+		# ------------------------------------------------------------------
+
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : ω_SOLAR_TIME_ANGLE_HOUR
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		""" Solar time angle, accounts that earth rotates 15ᵒ every hour. Hour angle is negative before solar noon, 0 at solar noon and positive afterwards"""
+			function ω_SOLAR_TIME_ANGLE_HOUR(;🎏_Tradition=false, Date, Latitude, Longitude, Z_Altitude, ΔT=1.0)
+				if 🎏_Tradition
+					# define observer location (latitude, longitude, altitude in meters)
+					Obs = Observer(Latitude, Longitude, Z_Altitude)
+
+					Positions = SolarPosition.solar_position(Obs, Date, PSA(), HUGHES());
+					SolarNoon = SolarPosition.Utilities.next_solar_noon(Obs,Date, SPA())
+
+					Positions_SolarNoon = SolarPosition.solar_position(Obs, SolarNoon, PSA(), HUGHES())
+					ω = (Positions.azimuth -Positions_SolarNoon.azimuth) * 2.0 * π / 360
+				else
+					Lz = 0.0 # Longitude of the center of the local time
+					Latitude_Radian = Latitude * π / 180
+					Longitude_Radian = Longitude * π / 180
+         		DayOfYear       = Dates.dayofyear(Date)
+         		Hour            = Dates.hour(Date)
+
+					B  = 2 * π * (DayOfYear - 81) / 364
+					Sc = 0.1645 * sin(2*B) - 0.1255 * cos(B) - 0.025 * sin(B)
+					ω  = (((Hour+0.5) + 0.06667 * (Lz - Longitude_Radian) + Sc ) - 12.0) * π / 12.0
+				end
+
+				ω₁ = ω - π * ΔT / 24.0
+				ω₂ = ω + π * ΔT / 24.0
+
+			return ω₁, ω₂
+			end #  ω_SOLAR_TIME_ANGLE_HOUR
+			# ------------------------------------------------------------------
 
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : Extraterrestrial_radiation
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Estimate daily extraterrestrial radiation (*Ra*, 'top of the atmosphere
-		radiation').
-
-		Based on equation 21 in Allen et al (1998). If monthly mean radiation is
-		required make sure *sol_dec*. *sha* and *irl* have been calculated using
-		the day of the year that corresponds to the middle of the month.
-
-		**Note**: From Allen et al (1998): "For the winter months in latitudes
-		greater than 55 degrees (N or S), the equations have limited validity.
-		Reference should be made to the Smithsonian Tables to assess possible
-		deviations."
-
-		:param latitude: Latitude [radians]
-		:param sol_dec: Solar declination [radians]. Can be calculated using
-			``sol_dec()``.
-		:param sha: Sunset hour angle [radians]. Can be calculated using
-			``sunset_hour_angle()``.
-		:param ird: Inverse relative distance earth-sun [dimensionless]. Can be
-			calculated using ``inv_rel_dist_earth_sun()``.
-		:return: Daily extraterrestrial radiation [MJ m-2 day-1]
-
+		"""
 		* Rₐ [MJ m-2 hour-1] EXTRATERRESTRIAL RADIATION IN THE HOUR (OR SHORTER) PERIOD ,
 
 		INPUT
@@ -242,48 +315,29 @@ module evapoFunc
 			* Longitude_ᴼ : Longitude of the measured site [degress west of Greenwish]
 			* longitude of the measurement site [degrees west of Greenwich]
 
-			PROCESS
+		PROCESS
 			ω [rad] solar time angle at midpoint of hourly or shorter period [rad]
 			ωₛ [rad] sunset hour angle
-
 		"""
+		function  Rₐ_EXTRATERRESTRIAL_RADIATION_HOURLY(;Date, Gsc, Latitude_Minute, Latitude_ᴼ, Longitude_Minute, Longitude_ᴼ, Lz= 0.0, Z_Altitude, ΔT=1.0)
 
-		function  Rₐ_EXTRATERRESTRIAL_RADIATION_HOURLY(;Gsc, Longitude_ᴼ, Latitude_Minute, Date, ΔT=1.0, Latitude_ᴼ, Lz= 0.0)
-
-         Latitude_Radian = (Latitude_ᴼ + Latitude_Minute / 60.0) * π/180
+			Latitude = (Latitude_ᴼ + Latitude_Minute / 60.0)
+			Longitude = (Longitude_ᴼ + Longitude_Minute / 60.0)
+			Latitude_Radian = Latitude * π / 180.0
          DayOfYear       = Dates.dayofyear(Date)
-         Hour            = Dates.hour(Date)
 
 			δ_SOLAR_INCLINATION(DayOfYear) = 0.409 * sin(DayOfYear * 2.0 * π / 365.0 - 1.39)
-			δ = δ_SOLAR_INCLINATION(DayOfYear)
+				δ = δ_SOLAR_INCLINATION(DayOfYear)
 
-			function ω_SOLAR_TIME_ANGLE_DAY(;Hour, DayOfYear, ΔT, δ)
-            ωₛ  = acos(-tan(Latitude_Radian) * tan(δ))
-			return ωₛ
-			end #  ω_SOLAR_TIME_ANGLE
-
-			function ω_SOLAR_TIME_ANGLE_HOUR(;Hour, DayOfYear, ΔT)
-				# ωday_SOLAR_TIME_ANGLE(Latitude_Radian, δ) = acos(-tan(Latitude_Radian) * tan(δ))
-            B  = 2 * π * (DayOfYear - 81) / 364
-            Sc = 0.1645 * sin(2*B) - 0.1255 * cos(B) - 0.025 * sin(B)
-            ω  = ((Hour + 0.06667 * (Lz - Longitude_ᴼ) * Sc ) - 12.0) * π / 12.0
-
-				ω₁ = ω - π * ΔT / 24.0
-				ω₂ = ω + π * ΔT / 24.0
-			return ω₁, ω₂
-			end #  ω_SOLAR_TIME_ANGLE
-
-			ω₁, ω₂ = ω_SOLAR_TIME_ANGLE_HOUR(Hour, DayOfYear, ΔT)
+			ω₁, ω₂ = ω_SOLAR_TIME_ANGLE_HOUR(;🎏_Tradition=false, Date, Latitude, Longitude, Z_Altitude, ΔT=1.0)
 
 			Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear) = 1.0 + 0.033 * cos(DayOfYear * 2.0 * π / 365.0)
-			Dₑₛ = Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear)
-
-
+				Dₑₛ = Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear)
 
 			Rₐ = (12.0 * 60.0 / π) * Gsc * Dₑₛ * (ω₂ - ω₁) * sin(Latitude_Radian) * sin(δ) + cos(Latitude_Radian) * cos(δ) * (sin(ω₂)- sin(ω₁))
 		return Rₐ
 		end  # function: Extraterrestrial_radiation
-	# ------------------------------------------------------------------
+		# ------------------------------------------------------------------
 
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : Rₙₗ_LONGWAVE RADIATION
@@ -308,6 +362,7 @@ module evapoFunc
 				function Rₛₒ_CLEAR_SKY_RADIATION(;Rₐ, Z_Altitude)
 					Rₛₒ = (0.75 + 2.0E-5 * Z_Altitude) * Rₐ
 				return Rₛₒ
+				end
 
 				T₁ = (σ * ((T_Kelvin + T_Max)^4 + (T_Kelvin + T_Min)^4) / 2.0)
 
@@ -356,6 +411,49 @@ module evapoFunc
 		# ------------------------------------------------------------------
 
 	end  # module: radiation
+	# ............................................................
+
+
+	# =============================================================
+	#		module: ground
+	# =============================================================
+	module ground
+		using SolarPosition, Dates
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : G_SOIL_HEAT_FLUX
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"""
+		G: [MJ m-2 day-1] SOIL HEAT FLUX DENSITY
+
+		INPUT
+			* Rₙ: [MJ m-2 day-1] measured solar radiation;
+		"""
+			function G_SOIL_HEAT_FLUX_HOURLY(;Date, Latitude_Minute, Latitude_ᴼ, Longitude_Minute, Longitude_ᴼ, Rₙ, Z_Altitude)
+
+				# Determening if daylight or nighttime or daylight
+					Latitude = (Latitude_ᴼ + Latitude_Minute / 60.0)
+					Longitude = (Longitude_ᴼ + Longitude_Minute / 60.0)
+
+					Obs = Observer(Latitude, Longitude, Z_Altitude)
+
+					Tsunrise = SolarPosition.next_sunrise(Obs, DateTime(Date))
+					Tsunrise_Hour = Dates.hour(Tsunrise)
+
+					Tsunset = SolarPosition.next_sunset(Obs, DateTime(Date))
+					Tsunset_Hour = Dates.hour(Tsunset)
+
+					T_Hour = Dates.hour(Date)
+
+				if Tsunset_Hour ≥ T_Hour ≥ Tsunrise_Hour
+					return G = 0.1 * Rₙ
+				else
+					return G = 0.5 * Rₙ
+				end
+			end  # function: G_SOIL_HEAT_FLUX
+		# ------------------------------------------------------------------
+
+	end  # module: ground
 	# ............................................................
 
 end  # module: evapoFunc

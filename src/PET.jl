@@ -8,6 +8,7 @@ module pet
 	include("Read.jl")
 	include("Write.jl")
 	include("ReadToml.jl")
+	include("EvapoFunc.jl")
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#		FUNCTION : PET

@@ -7,19 +7,15 @@ module read
 
 	Base.@kwdef mutable struct METEO
 		# Humidity [0-1]
-      RelativeHumidity            :: Union{Missing,Vector}
-		# Solar radiation max [ W/m³]
-      SolarRadiation_Max  :: Union{Missing,Vector}
-		# Solar radiation mean [ W/m³]
-      SolarRadiation_Mean :: Union{Missing,Vector}
-		# Solar radiation min [ W/m³]
-      SolarRadiation_Min  :: Union{Missing,Vector}
+      	RelativeHumidity            :: Union{Missing,Vector}
+		# Solar radiation mean [ W/M⁻²]
+      	SolarRadiation  :: Union{Missing,Vector}
 		# Maximum temperature [⁰C]
-      T_Max            :: Union{Missing,Vector}
+      	Temp            :: Union{Missing,Vector}
 		# Minimum temperature [⁰C]
-      T_Min            :: Union{Missing,Vector}
+      	TempSoil         :: Union{Missing,Vector}
 		# Velocity of wind speed [M S⁻¹]
-      Wind                   :: Union{Missing,Vector}
+      	Wind              :: Union{Missing,Vector}
 	end
 
 	function READ_WEATHER(Path_Input)
@@ -33,19 +29,18 @@ module read
       Day                 = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Day))
       Hour                = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Hour))
 
-		DateTime = Dates.DateTime.(Year, Month, Day, Hour) #  <"standard"> "proleptic_gregorian" calendar
+		DayHour = Dates.DateTime.(Year, Month, Day, Hour) #  <"standard"> "proleptic_gregorian" calendar
 
-      RelativeHumidity    = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("Humidity[%]")))
-      SolarRadiation_Max  = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SolarRadiation_Max[W/M3]")))
-      SolarRadiation_Mean = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SolarRadiation_Mean[W/M3]")))
-      SolarRadiation_Min  = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SolarRadiation_Min[W/M3]")))
-      T_Max               = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("AirTemperature_Max[⁰C]")))
-      T_Min               = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("AirTemperature_Min[⁰C]")))
-      Wind                = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("WindSpeed[M/S]")))
+      RelativeHumidity = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("Humidity[%]"))) ./ 100.0
+      SolarRadiation   = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SolarRadiation_Mean[W/M2]")))
+      Temp             = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("AirTemperature_Mean[⁰C]")))
+      TempSoil         = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SoilTemperature[⁰C]")))
+      Wind             = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("WindSpeed_Mean[M/S]")))
+      Pet_obs          = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("PET_Obs[MM]")))
 
 		Nmeteo = length(Year)
 
-		meteo = METEO(RelativeHumidity,  SolarRadiation_Max, SolarRadiation_Mean, SolarRadiation_Min, T_Max, T_Min, Wind)
+		meteo = METEO(RelativeHumidity, SolarRadiation, Temp, TempSoil, Wind)
 
 		# Testing for missing data
 		FieldName = propertynames(meteo)
@@ -59,7 +54,17 @@ module read
 			end
 		end
 
-	return DateTime, meteo, Nmeteo
+		#	PRODCESSING
+			# Convert [%] ➡ [0-1]
+				meteo.RelativeHumidity = meteo.RelativeHumidity ./ 100.0
+
+			# Convert [W m⁻² hour⁻¹] ➡ [MJ m⁻² hour⁻¹]
+				meteo.SolarRadiation = meteo.SolarRadiation * 60.0 * 60.0 * 1.0E-6
+
+			# Removing negative values
+				Pet_obs = max.(Pet_obs, 0.0)
+
+	return DayHour, meteo, Nmeteo, Pet_obs
 	end
 
 end  # module: read

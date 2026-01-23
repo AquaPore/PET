@@ -16,6 +16,7 @@ module readtoml
       Latitude_Minute  :: Float64
       Longitude_ᴼ      :: Float64
       Longitude_Minute :: Float64
+      Longitude_LocalTime::Float64
       R_Stomatal       :: Float64
       Z_Altitude       :: Float64
       Z_Humidity       :: Float64
@@ -26,13 +27,13 @@ module readtoml
 	@option struct CST
       Cₚ       :: Float64
       Gsc      :: Float64
-		Karmen   :: Float64
+      Karmen   :: Float64
       T_Kelvin :: Float64
       λ        :: Float64
       σ        :: Float64
-		σₕₒᵤᵣ     :: Float64
+      σₕₒᵤᵣ    :: Float64
       ϵ        :: Float64
-		ℜ       :: Float64
+      ℜ        :: Float64
 	end # struct CST
 
 	@option mutable struct OPTION

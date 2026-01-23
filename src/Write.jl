@@ -43,14 +43,16 @@ module write
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#		FUNCTION : TABLE_PET
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function TABLE_PET(DateTime, meteo, Nmeteo, Path_Output)
+		function TABLE_PET(;DayHour, meteo, Nmeteo, Path_Output, Pet, Pet_Obs)
 			Matrix₁, FieldName_String = write.STRUCT_2_FIELDNAME(Nmeteo, meteo)
 
 			pushfirst!(FieldName_String, string("Date")) # Write the "Id" at the very begenning
+			push!(FieldName_String, string("Pet_Sim")) # Write the "Id" at the very begenning
+			push!(FieldName_String, string("Pet_Obs")) # Write the "Id" at the very begenning
 
 			println(FieldName_String)
 
-			CSV.write(Path_Output, Tables.table([DateTime Matrix₁]), writeheader=true, header=FieldName_String, bom=true)
+			CSV.write(Path_Output, Tables.table([DayHour Matrix₁ Pet Pet_Obs]), writeheader=true, header=FieldName_String, bom=true)
 		return nothing
 		end  # function: TABLE_PET
 	# ------------------------------------------------------------------

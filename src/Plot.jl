@@ -15,10 +15,9 @@ module plot
 				CairoMakie.activate!(type="svg", pt_per_unit=1)
 				Fig = Figure(font="Sans", titlesize=20,  xlabelsize=20, ylabelsize=20, labelsize=30, fontsize=20)
 
-
 			Axis_1 =  Axis(Fig[1, 1], yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$PET_{Sim}$ ", ylabel= L"$PET_{Obs}$ $[mm]$", xgridvisible=false, ygridvisible=false, width=800, height=400)
 
-				scatter!(min.(Pet,2.0), Pet_Obs)
+				scatter!(Axis_1, Pet, Pet_Obs)
 
 				lines!(Axis_1, Line, Line, color=:grey, linestyle=:dash, linewidth=5)
 

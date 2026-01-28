@@ -10,12 +10,11 @@ module evapoFunc
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : PENMAN_MONTEITH_HOURLY
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function PET_PENMAN_MONTEITH_HOURLY(; Cₚ, Eₐ, Eₛ, G, Rₐ_Inv, ΔRadₙ, Rₛ, γ, Δ, λ, ρₐᵢᵣ)
+			function PET_PENMAN_MONTEITH_HOURLY(;Kc, Cₚ, Eₐ, Eₛ, G, Rₐ_Inv, ΔRadₙ, Rₛ, γ, Δ, λᵥ, ρₐᵢᵣ, ΔT₁)
 
-				ETₒ =   inv(λ) *  (Δ * (ΔRadₙ - G) + ρₐᵢᵣ * Cₚ * max(Eₛ - Eₐ, 0.0) * Rₐ_Inv) / (Δ + γ * (1.0 + Rₛ * Rₐ_Inv))
+				ETₒ =  Kc * inv(λᵥ) *  (Δ * (ΔRadₙ - G) + ρₐᵢᵣ * Cₚ * max(Eₛ - Eₐ, 0.0) * Rₐ_Inv) / (Δ + γ * (1.0 + Rₛ * Rₐ_Inv))
 
-				# ETₒ =    (inv(λ) * Δ * max(ΔRadₙ - G, 0.0) + ρₐᵢᵣ * Cₚ * max(Eₛ - Eₐ, 0.0) * Rₐ_Inv) / (Δ + γ * (1.0 + Rₛ * Rₐ_Inv))
-				ETₒ = max(ETₒ, 0.0)
+				ETₒ = max(ETₒ, 0.0) * ΔT₁
 
 			return ETₒ
 			end  # function: PENMAN_MONTEITH_HOURLY
@@ -115,10 +114,34 @@ module evapoFunc
 	# =============================================================
 	module physics
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : λ_LATENT_HEAT_VAPORIZATION
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"""
+		λᵥ [J kg-1] LATENT HEAT OF VAPORIZATION
+		energy required to evaporize 1mm of water
+
+		INPUT
+			* Temp [ᵒC] air temperature
+		"""
+		function λ_LATENT_HEAT_VAPORIZATION(;Temp)
+			 λᵥ = (2503 - 2.39 * Temp) * 1.0E3
+		return λᵥ
+		end  # function: λ_LATENT_HEAT_VAPORIZATION
+		# ------------------------------------------------------------------
+
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : ATMOSPHERIC_PRESSURE
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function ATMOSPHERIC_PRESSURE(;Z_Altitude)
-				Pressure = 101.3 * ((293.0 - 0.0065 * Z_Altitude) / 293.0 ) ^ 5.26
+		"""
+		PRESSURE [kPa]
+
+		INPUT
+			* Temp [ᵒC] air temperature
+			* Z_Altitude;
+		"""
+			function ATMOSPHERIC_PRESSURE(;T_Kelvin, Temp, Z_Altitude)
+				Pressure = 101.3 * ((293.0 - 0.0065 * Z_Altitude) / (T_Kelvin + Temp)) ^ 5.26
 			return Pressure
 			end  # function: ATMOSPHERIC_PRESSURE
 		# ------------------------------------------------------------------
@@ -129,18 +152,19 @@ module evapoFunc
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
 		γ PSYCHROMETRIC CONSTANT [kPa °C-1],
+
 		The specific heat at constant pressure is the amount of energy required to increase the temperature of a unit mass of air by one degree at constant pressure.
 
 		INPUT:
 			Pressure: [kPa] atmospheric pressure ,
 
 		CONSTANTS:
-			* λ: [MJ kg-1] latent heat of vaporization, 2.45 ,
-			* Cp: [MJ kg-1 °C-1] specific heat at constant pressure, 1.013 10-3 ,
+			* λᵥ: [J kg-1], λ_LATENT_HEAT_VAPORIZATION(), latent heat of vaporization, "2.45" ,
+			* Cp: [J kg-1 °C-1] specific heat at constant pressure, 1.013 10-3 ,
 			* ε: ratio molecular weight of water vapour/dry air = 0.622.
 		"""
-			function γ_PSYCHROMETRIC(;Cₚ, Pressure, ϵ, λ)
-				γ = (Cₚ * Pressure) /  (ϵ * λ)
+			function γ_PSYCHROMETRIC(;Cₚ, Pressure, ϵ, λᵥ)
+				γ = (Cₚ * Pressure) /  (ϵ * λᵥ)
 			return γ
 			end  # function: ϵ
 		# ------------------------------------------------------------------
@@ -150,15 +174,19 @@ module evapoFunc
 		#		FUNCTION : ρₐᵢᵣ_AIR_DENSITY
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
-		ρₐᵢᵣ MEAN AIR DENSITY AT CONSTANT PRESSURE [kg m-3]
+		ρₐᵢᵣ MEAN AIR/ ATMOSPHERIC DENSITY AT CONSTANT PRESSURE [kg m ⁻³]
 
 		INPUT:
 			* Pressure: [kPa] Atmospheric pressure,
 			* T_Kelvin: constant Conversion from C to Kelvin,
-			* ℜ: [ kJ kg-1 K-1] constantspecific gas constant
+			* ℜ: [J kg-1 K-1] constants pecific gas constant
+
+			PROCESSES
+			# Tkv  [k] Virtual Temp
 		"""
-			function ρₐᵢᵣ_AIR_DENSITY(;Pressure, Temp, T_Kelvin, ℜ)
-				ρₐᵢᵣ = Pressure / (ℜ * (T_Kelvin + Temp))
+			function ρₐᵢᵣ_AIR_DENSITY(;Eₐ, Pressure, ℜ, T_Kelvin, Temp)
+				Tkv = (T_Kelvin + Temp) * (1.0 - 0.378 * Eₐ / Pressure) ^ -1
+				ρₐᵢᵣ = 1000.0 * Pressure / (ℜ * Tkv)
 			return ρₐᵢᵣ
 			end  # function: ρₐᵢᵣ_AIR_DENSITY
 			# ------------------------------------------------------------------
@@ -174,7 +202,10 @@ module evapoFunc
 		#		FUNCTION : Eᴼ_SATURATED_VAPOUR_PRESSURE
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
-		Eᴼ(Temp) [kPa]: saturation vapour pressure at the air temperature
+		Eᴼ(Temp) [kPa]: SATURATION VAPOUR PRESSURE at the air temperature
+
+			INPUT
+			* Temp [ᴼc]
 		"""
 			function Eᴼ_SATURATION_VAPOUR_PRESSURE(;Temp)
 				Eᴼ = 0.6108 * exp(17.27 * Temp / (Temp + 237.3))
@@ -190,7 +221,7 @@ module evapoFunc
 		Eₐ [kPa] ACTUAL VAPOUR PRESSURE
 
 		INPUT
-		RelativeHumidity: [0-1  degree of saturation of the air (eₐ) to the saturation (eₛ =eₒ(Temp)) vapour pressure at the same temperature (Temp):
+		* RelativeHumidity: [0-1  degree of saturation of the air (eₐ) to the saturation (eₛ =eₒ(Temp)) vapour pressure at the same temperature (Temp):
 		"""
 			function Eₐ_ACTUAL_VAPOUR_PRESSURE_RH(;RelativeHumidity, Eₛ)
 				Eₐ = 	RelativeHumidity * Eₛ
@@ -205,11 +236,18 @@ module evapoFunc
 		#		FUNCTION : Δ_SATURATION_VAPOUR_P_CURVE
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			"""
-			Δ: [kPa °C-1] SLOPE OF SATURATION VAPOUR PRESSURE CURVE AT AIR TEMPERATURE Temp ,
+			Δ: [kPa°C-1] SLOPE OF SATURATION VAPOUR PRESSURE CURVE AT AIR TEMPERATURE Temp ,
 			slope of the relationship between saturation vapour pressure and temperature
+
+				INPUT
+				* Temp [ᴼc]: air temperature
 			"""
 			function Δ_SATURATION_VAPOUR_P_CURVE(;Temp)
-				Δ = 4098.0 *0.6108 * exp(17.27 * Temp / (Temp + 237.3)) / (Temp + 237.3) ^ 2
+				# Δ = 4098.0 * 0.6108 * exp(17.27 * Temp / (Temp + 237.3)) / (Temp + 237.3) ^ 2.0
+
+				Eₛ = humidity.Eᴼ_SATURATION_VAPOUR_PRESSURE(;Temp)
+
+				Δ = 4098.0 * Eₛ / (Temp + 237.3) ^ 2.0
 			return Δ
 			end  # function: Δ_SATURATION_VAPOUR_P_CURVE
 		# ------------------------------------------------------------------
@@ -251,17 +289,31 @@ module evapoFunc
 		#		FUNCTION :  ωₛ_SUNSET_HOUR_ANGLE
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			function ωₛ_SUNSET_HOUR_ANGLE(;Latitude_Radian, δ)
-            ωₛ  = acos(-tan(Latitude_Radian) * tan(δ))
-			return ωₛ
+            ωₛᵤₙₛₑₜ = acos(-tan(Latitude_Radian) * tan(δ))
+			return ωₛᵤₙₛₑₜ
 			end # ωₛ_SUNSET_HOUR_ANGLE
+		# ------------------------------------------------------------------
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : DAY_NIGHT
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			function SUNLIGHT(;ω_SolarTime, Latitude_Radian, δ, Hour)
+				ωₛᵤₙₛₑₜ = radiation.ωₛ_SUNSET_HOUR_ANGLE(;Latitude_Radian, δ)
+
+				if ωₛᵤₙₛₑₜ < ω_SolarTime || -ωₛᵤₙₛₑₜ > ω_SolarTime
+					return 🎏_Daylight = 0
+				else
+					return 🎏_Daylight = 1
+				end
+			end  # function: DAY_NIGHT
 		# ------------------------------------------------------------------
 
 
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION :  N_HOURS_DAYLIGHT
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			function N_HOURS_DAYLIGHT(;ωₛ)
-            Ndaylight = 2.0 * 24.0 * ωₛ / (2.0 * π)
+			function N_HOURS_DAYLIGHT(;ω_SolarTime, )
+            Ndaylight = 2.0 * 24.0 * ω_SolarTime / (2.0 * π)
 			return Ndaylight
 			end # N_HOURS_DAYLIGHT
 		# ------------------------------------------------------------------
@@ -271,7 +323,12 @@ module evapoFunc
 		#		FUNCTION : ω_SOLAR_TIME_ANGLE_HOUR
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		""" Solar time angle, accounts that earth rotates 15ᵒ every hour. Hour angle is negative before solar noon, 0 at solar noon and positive afterwards"""
-			function ω_SOLAR_TIME_ANGLE_HOUR(;🎏_Tradition=false, DateTime, Latitude, Longitude, Z_Altitude, ΔT=1.0, Longitude_LocalTime=0.0)
+			function ω_SOLAR_TIME_ANGLE_HOUR(;🎏_Tradition=true, DateTime, Latitude, Longitude, Z_Altitude, ΔT₁, Longitude_LocalTime=0.0)
+
+				🎏_Tradition=true
+
+				HourFraction = min(ΔT₁ / (60.0 * 60.0), 1.0)
+
 				if !🎏_Tradition
 					# define observer location (latitude, longitude, altitude in meters)
 					Obs = Observer(Latitude, Longitude, Z_Altitude)
@@ -280,7 +337,7 @@ module evapoFunc
 					SolarNoon = SolarPosition.Utilities.next_solar_noon(Obs,DateTime, SPA())
 
 					Positions_SolarNoon = SolarPosition.solar_position(Obs, SolarNoon, PSA(), HUGHES())
-					ω = (Positions.azimuth - Positions_SolarNoon.azimuth) * π / 180.0
+					ω_SolarTime = (Positions.azimuth - Positions_SolarNoon.azimuth) * π / 180.0
 				else
                # Longitude_LocalTime       = 0. # [Degree] Longitude of the center of the local time Lz = 15.0 for senegal
                DayOfYear = Dates.dayofyear(DateTime)
@@ -288,28 +345,27 @@ module evapoFunc
 
 					B  = 2 * π * (DayOfYear - 81) / 364
 					Sc = 0.1645 * sin(2.0*B) - 0.1255 * cos(B) - 0.025 * sin(B)
-					ω  = (((Hour+0.5) + 0.06667 * (Longitude_LocalTime - Longitude) + Sc ) - 12.0) * π / 12.0
+					ω_SolarTime  = (((Hour + HourFraction) + 0.06667 * (Longitude_LocalTime - Longitude) + Sc ) - 12.0) * π / 12.0
 				end
+				ω₁ = ω_SolarTime - π * HourFraction / 24.0
+				ω₂ = ω_SolarTime + π * HourFraction / 24.0
 
-				ω₁ = ω - π * ΔT / 24.0
-				ω₂ = ω + π * ΔT / 24.0
-
-			return ω₁, ω₂
+			return ω_SolarTime, ω₁, ω₂
 			end #  ω_SOLAR_TIME_ANGLE_HOUR
-			# ------------------------------------------------------------------
+		# ------------------------------------------------------------------
 
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : Extraterrestrial_radiation
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
-		* Rₐ [MJ m-2 hour-1] EXTRATERRESTRIAL RADIATION IN THE HOUR (OR SHORTER) PERIOD ,
+		* Rₐ [J m-2 second-1] EXTRATERRESTRIAL RADIATION IN THE HOUR (OR SHORTER) PERIOD ,
 
 		INPUT
-			* Gsc: [MJ m-2 min-1] solar constant = 0.0820 ,
-			* Dₑₛ: [m] inverse relative distance Earth-Sun (Equation 23),
-			* δ: solar declination [rad] (Equation 24),
-			* ϕ: latitude [rad] (Equation 22),
-			* ω1 [rad]: solar time angle at beginning of period [rad] (Equation 29),
+			* Gsc: [J m⁻² second⁻¹] solar constant = 0.0820 ,
+			* Dₑₛ: [m] inverse relative distance Earth-Sun ,
+			* δ: [rad] solar declination ,
+			* ϕ: [rad] latitude ,
+			* ω1 [rad]: solar time angle at beginning of period [rad] ,
 			* ω2 [rad]: solar time angle at end of period  (Equation 30).
 			* ΔT [hour] time step
 			* Longitude_ᴼ : Longitude of the measured site [degress west of Greenwish]
@@ -319,7 +375,7 @@ module evapoFunc
 			ω [rad] solar time angle at midpoint of hourly or shorter period [rad]
 			ωₛ [rad] sunset hour angle
 		"""
-		function  Rₐ_EXTRATERRESTRIAL_RADIATION_HOURLY(;DateTime, Gsc, Latitude, Longitude, Longitude_LocalTime = 0.0, Z_Altitude, ΔT=1.0)
+		function  Rₐ_EXTRATERRESTRIAL_RADIATION_HOURLY(;DateTime, Gsc, Latitude, Longitude, Longitude_LocalTime = 0.0, Z_Altitude, ΔT₁)
 
 			Latitude_Radian = Latitude * π / 180.0
          DayOfYear       = Dates.dayofyear(DateTime)
@@ -327,14 +383,34 @@ module evapoFunc
 			δ_SOLAR_INCLINATION(DayOfYear) = 0.409 * sin(DayOfYear * 2.0 * π / 365.0 - 1.39)
 				δ = δ_SOLAR_INCLINATION(DayOfYear)
 
-			ω₁, ω₂ = ω_SOLAR_TIME_ANGLE_HOUR(;🎏_Tradition=false, DateTime, Latitude, Longitude, Z_Altitude, ΔT=1.0, Longitude_LocalTime)
+			ω_SolarTime, ω₁, ω₂ = ω_SOLAR_TIME_ANGLE_HOUR(;🎏_Tradition=false, DateTime, Latitude, Longitude, Z_Altitude, Longitude_LocalTime, ΔT₁)
 
 			Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear) = 1.0 + 0.033 * cos(DayOfYear * 2.0 * π / 365.0)
 				Dₑₛ = Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear)
 
-			Radₐ =  (12.0 / π) * Gsc * Dₑₛ * ((ω₂ - ω₁) * sin(Latitude_Radian) * sin(δ) + cos(Latitude_Radian) * cos(δ) * (sin(ω₂)- sin(ω₁)))
-		return Radₐ
+				# IF daylight then
+				Hour      = Dates.hour(DateTime)
+				🎏_Daylight = radiation.SUNLIGHT(;ω_SolarTime, Latitude_Radian, δ, Hour)
+
+			Radₐ = 🎏_Daylight * (12.0 * 60 / π) * Gsc * Dₑₛ * ((ω₂ - ω₁) * sin(Latitude_Radian) * sin(δ) + cos(Latitude_Radian) * cos(δ) * (sin(ω₂) - sin(ω₁)))
+		return Radₐ, 🎏_Daylight
 		end  # function: Extraterrestrial_radiation
+		# ------------------------------------------------------------------
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	#		FUNCTION : Radₛₒ_CLEAR_SKY_RADIATION
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""
+	 Radₛₒ: [MJ m-2 second-1]: CLEAR-SKY RADIATION.
+	Short Wave Radiation on a Clear-Sky Day
+
+	INPUT
+	* Z_Altitude: [m] Altitude
+	*  Radₐ [J m-2 second-1] extraterrestrial radiation
+	"""
+		function Radₛₒ_CLEAR_SKY_RADIATION(;Radₐ, Z_Altitude)
+			return Radₛₒ = (0.75 + 2.0E-5 * Z_Altitude) * Radₐ
+		end  # Radₛₒ_CLEAR_SKY_RADIATION
 		# ------------------------------------------------------------------
 
 
@@ -342,34 +418,46 @@ module evapoFunc
 		#		FUNCTION : Rₙₗ_LONGWAVE RADIATION
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
-		Rₙₗ: [MJ m-2 hour-1] NET OUTGOING LONGWAVE RADIATION.
+		Rₙₗ: [J m-2 second-1] NET OUTGOING LONGWAVE RADIATION.
 
 		INPUT
-			* σₕₒᵤᵣ: [MJ K-4 m-2 hour-1] Stefan-Boltzmann constant [ 4.903 10-9 ];
+			* σ: [J K-4 m-2 second-1] Stefan-Boltzmann constant;
 			* Temp: [ᵒC] average hourly temperature,
 			* Eₐ: [kPa] actual vapour pressure;
-			* Radₛ: [MJ m-2 hour-1] measured solar radiation;
+			* Radₛ: [J m-2 second-1] measured solar radiation;
 
 		PROCESSES
-			* Radₛₒ[MJ m-2 hour-1]: clear-sky radiation.
+			* Radₛₒ: [MJ m-2 second7-1]: clear-sky radiation.
 
 			Radₛ/Radₛₒ relative shortwave radiation (limited to ≤ 1.0),
 		"""
-			function Radₙₗ_LONGWAVE_RADIATION(;σₕₒᵤᵣ, Temp, Eₐ, Radₛ, T_Kelvin, Radₐ, Z_Altitude)
-
-				function Radₛₒ_CLEAR_SKY_RADIATION(;Radₐ, Z_Altitude)
-					return Radₛₒ = (0.75 + 2.0E-5 * Z_Altitude) * Radₐ
-				end
-
+			function Radₙₗ_LONGWAVE_RADIATION(;σ, Temp, Eₐ, Radₛ, T_Kelvin,  Radₛₒ)
 				# if 🎏_Hourly
 				# T₁ = (σ * ((T_Kelvin + T_Max)^4 + (T_Kelvin + T_Min)^4) / 2.0)
 
-				Radₛₒ = Radₛₒ_CLEAR_SKY_RADIATION(;Radₐ, Z_Altitude)
-
 				# Correction for effect of cloundiness
-				Radₙₗ =  (σₕₒᵤᵣ * (T_Kelvin + Temp) ^4) * (0.34 - (0.14 * √Eₐ)) * (1.35 * min(Radₛ / Radₛₒ, 1.0) - 0.35)
+				Radₙₗ =  (σ * (T_Kelvin + Temp) ^4) * (0.34 - (0.14 * √Eₐ)) * (1.35 * min(Radₛ / Radₛₒ, 1.0) - 0.35)
 			return Radₙₗ
 			end  # function: Rₙₗ_LONGWAVE RADIATION
+		# ------------------------------------------------------------------
+
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#		FUNCTION : Radₙₛ_NET_SHORTWAVE_RADIATION_REFLECTED
+		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		"""
+		 Radₙₛ: [J m-2 second-1] INCOMING NET SHORTWAVE RADIATION
+
+		INPUT
+			* Radₛ: [J m-2 second-1] measured solar radiation;
+
+		PARAMETER
+			* α: [-] albedo or canopy reflection coefficient, which is 0.23 for the hypothetical grass reference crop
+		"""
+				function Radₙₛ_NET_SHORTWAVE_RADIATION_REFLECTED(;α, Radₛ)
+					Radₙₛ = (1.0 - α ) * Radₛ
+				return Radₙₛ
+				end  # function: Rₙₛ_NET_SHORTWAVE_RADIATION
+
 		# ------------------------------------------------------------------
 
 
@@ -377,27 +465,13 @@ module evapoFunc
 		#		FUNCTION : Radₙ_NET_RADIATION
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""
-		Rₙ [MJ m-2 hour-1] NET RADIATION AT THE CROP SURFACE
+		Rₙ [MJ m-2 second-1] NET RADIATION AT THE CROP SURFACE
 
 		INPUT
-			* Radₙₛ: [MJ m-2 hour-1] Incoming net shortwave radiation,
-		 	* Radₙₗ: [MJ m-2 hour-1] Outgoing net longwave radiation.
-
-		PARAMETER
-			* α: [-] albedo or canopy reflection coefficient, which is 0.23 for the hypothetical grass reference crop
-
-		PROCESSES
-			* Radₙₛ: [MJ m-2 hour-1] net shortwave radiation resulting from the balance between incoming and reflected solar radiation
+			* Radₙₛ: [J m-2 second-1] Incoming net shortwave radiation,
+		 	* Radₙₗ: [J m-2 second-1] Outgoing net longwave radiation.
 		"""
-			function ΔRadₙ_NET_RADIATION(;Radₙₗ, α, Radₛ)
-
-				function Radₙₛ_NET_SHORTWAVE_RADIATION_REFLECTED(;α, Radₛ)
-					Radₙₛ = (1.0 - α ) * Radₛ
-				return Radₙₛ
-				end  # function: Rₙₛ_NET_SHORTWAVE_RADIATION
-
-		 		Radₙₛ = Radₙₛ_NET_SHORTWAVE_RADIATION_REFLECTED(;α, Radₛ)
-
+			function ΔRadₙ_NET_RADIATION(;Radₙₗ,  Radₙₛ)
 				ΔRadₙ = Radₙₛ - Radₙₗ
 			return ΔRadₙ
 			end  # function: Rₙ_NET_RADIATION
@@ -422,7 +496,7 @@ module evapoFunc
 		INPUT
 			* Rₙ: [MJ m-2 hour-1] measured solar radiation;
 		"""
-			function G_SOIL_HEAT_FLUX_HOURLY(;DateTime, Latitude, Longitude, ΔRadₙ, Z_Altitude)
+			function G_SOIL_HEAT_FLUX_HOURLY(;DateTime, Latitude, Longitude, ΔRadₙ, Z_Altitude, 🎏_Daylight)
 
 				# Determening if daylight or nighttime or daylight
 					# Latitude = (Latitude_ᴼ + Latitude_Minute / 60.0)
@@ -445,8 +519,11 @@ module evapoFunc
 					return G = 0.5 * ΔRadₙ
 				end
 
-
-				# return G = 0
+				# if 🎏_Daylight == 1
+				# 	return G = 0.1 * ΔRadₙ
+				# else
+				# 	return G = 0.5 * ΔRadₙ
+				# end
 			end  # function: G_SOIL_HEAT_FLUX
 		# ------------------------------------------------------------------
 	end  # module: ground

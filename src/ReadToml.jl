@@ -12,22 +12,22 @@ module readtoml
 	end # struct DATA
 
 	@option struct PARAM
-		Hcrop               :: Float64
-		Latitude_ᴼ          :: Float64
-		Latitude_Minute     :: Float64
-		Longitude_ᴼ         :: Float64
-		Longitude_Minute    :: Float64
-		Longitude_LocalTime :: Float64
-		R_Stomatal          :: Float64
-		Z_Altitude          :: Float64
-		Z_Humidity          :: Float64
-		Z_Wind              :: Float64
-		α                   :: Float64
-		Kc                  :: Float64
-		SoilHeatFlux_Sunlight :: Float64
-		SoilHeatFlux_Night :: Float64
-		Rₛ :: Float64
-		Ra_Param :: Float64
+      Hcrop                 :: Float64
+      Latitude_ᴼ            :: Float64
+      Latitude_Minute       :: Float64
+      Longitude_ᴼ           :: Float64
+      Longitude_Minute      :: Float64
+      Longitude_LocalTime   :: Float64
+      R_Stomatal            :: Float64
+      Z_Altitude            :: Float64
+      Z_Humidity            :: Float64
+      Z_Wind                :: Float64
+      α                     :: Float64
+      Kc                    :: Float64
+      SoilHeatFlux_Sunlight :: Float64
+      SoilHeatFlux_Night    :: Float64
+      Rₛ                    :: Float64
+      Ra_Param              :: Float64
 	end # STRUCT PARAM
 
 	@option struct CST
@@ -50,6 +50,7 @@ module readtoml
       🎏_Ra_Param    :: Bool
       🎏_Rs_Param    :: Bool
       🎏_ω_Tradition :: Bool
+      🎏_PetObs     :: Bool
 	end # struct DATE
 
 	@option struct OPTION

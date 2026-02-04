@@ -24,7 +24,7 @@ module read
 Read weather data from .csv
 
 """
-	function READ_WEATHER(; date, path)
+	function READ_WEATHER(; date, path, flag)
 
 		# Reading data from CSV
 			Path_Input = joinpath(pwd(), path.Path_Input)
@@ -47,7 +47,12 @@ Read weather data from .csv
 			Temp₀             = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("AirTemperature[°C]")))
 			TempSoil₀         = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SoilTemperature[°C]")))
 			Wind₀             = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("WindSpeed[m/s]")))
-			Pet_Obs           = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("PotentialEvapotranspiration[mm]")))
+
+			if flag.🎏_PetObs
+				Pet_Obs           = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("PotentialEvapotranspiration[mm]")))
+			else
+				Pet_Obs = zeros(Nmeteo₀)
+			end
 			🎏_DataMissing      = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("FlagMissing")))
 
 		# Determening period of interest

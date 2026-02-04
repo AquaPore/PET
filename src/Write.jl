@@ -43,7 +43,7 @@ module write
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#		FUNCTION : TABLE_PET
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function TABLE_PET(;DayHour, meteo, Nmeteo, Pet_Sim, Pet_Obs, path)
+		function TABLE_PET(;DayHour, meteo, Nmeteo, Pet_Sim, Pet_Obs, path, flag)
 
 			Path_Output = joinpath(pwd(), path.Path_Output_Csv)
 
@@ -51,11 +51,18 @@ module write
 
 			pushfirst!(FieldName_String, string("Date")) # Write the "Id" at the very begenning
 			push!(FieldName_String, string("Pet_Sim")) # Write the "Id" at the very begenning
-			push!(FieldName_String, string("Pet_Obs")) # Write the "Id" at the very begenning
+
+			if flag.🎏_PetObs
+				push!(FieldName_String, string("Pet_Obs")) # Write the "Id" at the very begenning
+			end
 
 			println(FieldName_String)
 
-			CSV.write(Path_Output, Tables.table([DayHour Matrix₁ Pet_Sim Pet_Obs]), writeheader=true, header=FieldName_String, bom=true)
+			if flag.🎏_PetObs
+				CSV.write(Path_Output, Tables.table([DayHour Matrix₁ Pet_Sim Pet_Obs]), writeheader=true, header=FieldName_String, bom=true)
+			else
+				CSV.write(Path_Output, Tables.table([DayHour Matrix₁ Pet_Sim]), writeheader=true, header=FieldName_String, bom=true)
+			end
 		return nothing
 		end  # function: TABLE_PET
 	# ------------------------------------------------------------------

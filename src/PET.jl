@@ -14,7 +14,7 @@ module pet
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#		FUNCTION : PET
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function RUN_PET()
+		function RUN_PET(;α)
 			printstyled(" ==== Running PET ======= \n", color=:blue)
 
 			# Read TOML input file
@@ -23,7 +23,7 @@ module pet
             option     = readtoml.READTOML(Path_Toml)
 
 			# Read .csv
-				DayHour, meteo, Nmeteo, Pet_Obs, ΔT = read.READ_WEATHER(; option.date, option.path)
+				DayHour, meteo, Nmeteo, Pet_Obs, ΔT = read.READ_WEATHER(; option.date, option.path, option.flag)
 
 				Pet_Sim = zeros(Float64, Nmeteo)
 
@@ -37,11 +37,10 @@ module pet
 				end # for iT =1:Nmeteo
 
 			# Writting output csv
-
-					write.TABLE_PET(;DayHour, meteo, Nmeteo, option.path, Pet_Sim, Pet_Obs)
+					write.TABLE_PET(;DayHour, meteo, Nmeteo, option.path, Pet_Sim, Pet_Obs, option.flag)
 
 			# Plotting output
-				plot.PLOT_PET(;DayHour, Pet_Sim, Pet_Obs, Nmeteo, option.path)
+				plot.PLOT_PET(;DayHour, Pet_Sim, Pet_Obs, Nmeteo, option.path, option.flag)
 
 		end  # function: PET
 	# ------------------------------------------------------------------
@@ -122,4 +121,4 @@ module pet
 	#------------------------------------------------------------------
 end
 
-pet.RUN_PET()
+pet.RUN_PET(;α=0.2)

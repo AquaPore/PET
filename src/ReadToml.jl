@@ -13,11 +13,8 @@ module readtoml
 
 	@option struct PARAM
       Hcrop                 :: Float64
-      Latitude_ᴼ            :: Float64
-      Latitude_Minute       :: Float64
-      Longitude_ᴼ           :: Float64
-      Longitude_Minute      :: Float64
-      Longitude_LocalTime   :: Float64
+      Latitude            :: Float64
+      Longitude           :: Float64
       R_Stomatal            :: Float64
       Z_Altitude            :: Float64
       Z_Humidity            :: Float64
@@ -51,13 +48,13 @@ module readtoml
 	end # struct DATE
 
       @option struct MISSINGS
-	      ΔTmax_Missing    :: Integer
+         ΔTmax_Missing :: Integer
+         MissingValue  :: Integer
 		end # struct DATE
 
 	@option struct FLAG
 		🎏_Ra_Param    :: Bool
 		🎏_Rs_Param    :: Bool
-		🎏_ω_Tradition :: Bool
 		🎏_PetObs     :: Bool
 	end # struct DATE
 

@@ -2,8 +2,10 @@
 #		module: read
 # =============================================================
 module read
-	using Dates, CSV, Tables, DataFrames
-	import ..interpolation
+	using Dates, CSV, Tables, DataFrames, Logging, Revise
+	import ..interpolation, ..evapoFunc
+
+	global_logger(ConsoleLogger())
 
 	Base.@kwdef mutable struct METEO
 		# Id
@@ -25,7 +27,7 @@ module read
 Read weather data from .csv
 
 """
-	function READ_WEATHER(; date, path, flag, missings)
+	function READ_WEATHER(; date, path, flag, missings, param)
 
 		# READING DATA FROM CSV
 			Path_Input = joinpath(pwd(), path.Path_Input)
@@ -84,19 +86,58 @@ Read weather data from .csv
 				ΔT[1] = copy(ΔT[2])
 
 		# Reducing the data to the data of interest
-			ΔT = ΔT[DateTrue]
-			DayHour = DayHour[DateTrue]
+         ΔT                = ΔT[DateTrue]
+         DayHour           = DayHour[DateTrue]
+         RelativeHumidity₀ = RelativeHumidity₀[DateTrue]
+         SolarRadiation₀   = SolarRadiation₀[DateTrue]
+         Temp₀             = Temp₀[DateTrue]
+         TempSoil₀         = TempSoil₀[DateTrue]
+         Wind₀             = Wind₀[DateTrue]
+         Pet_Obs           = Pet_Obs[DateTrue]
 
-		🎏_DataMissing = fill(false, Nmeteo)
+			# MISSING DATA: linear interpolation between the missing variables
+			🎏_DataMissing = fill(false, Nmeteo)
 
-		# MISSING DATA: linear interpolation between the missing variables
-         RelativeHumidity₀, 🎏_DataMissing = read.FINDING_9999(;Input=RelativeHumidity₀[DateTrue], DayHour, Nmeteo, missings, 🎏_DataMissing, Error=-9999)
-         SolarRadiation₀, 🎏_DataMissing   = read.FINDING_9999(;Input=SolarRadiation₀[DateTrue], DayHour, Nmeteo, missings, 🎏_DataMissing, Error=-9999)
-         Temp₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Temp₀[DateTrue], DayHour, Nmeteo, missings, 🎏_DataMissing, Error=-9999)
-         TempSoil₀, 🎏_DataMissing         = read.FINDING_9999(;Input=TempSoil₀[DateTrue], DayHour, Nmeteo, missings, 🎏_DataMissing, Error=-9999)
-         Wind₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Wind₀[DateTrue], DayHour, Nmeteo, missings, 🎏_DataMissing, Error=-9999)
+         SolarRadiation₀, 🎏_DataMissing   = read.FINDING_9999(;Input=SolarRadiation₀, DayHour, Nmeteo, missings,🎏_DataMissing, Error=missings.MissingValue)
 
-         Pet_Obs, ~           = read.FINDING_9999(;Input=Pet_Obs[DateTrue], DayHour, Nmeteo, missings, 🎏_DataMissing, Error=-9999)
+				# If <🎏_DataMissing> = true but it is during night time, we can assume that SolarRadiation is close to 0 and therefore we can remove data missing and assume SolarRadiation₀ = 0.0
+				for iT=1:Nmeteo
+					if 🎏_DataMissing[iT]
+
+						🎏_Daylight, T_Hour, Tsunrise, Tsunrise = evapoFunc.radiation.SUNLIGHT_HOURS(;DateTimeMinute=DayHour[iT], param.Latitude, param.Longitude, param.Z_Altitude)
+
+						if !(🎏_Daylight)
+							SolarRadiation₀[iT] = min(SolarRadiation₀[iT], 10.0)
+							🎏_DataMissing[iT] = false
+						end # if !(🎏_Daylight[iT])
+
+					end # if 🎏_DataMissing[iT]
+				end # for iT=1:Nmeteo
+
+			RelativeHumidity₀, 🎏_DataMissing = read.FINDING_9999(;Input=RelativeHumidity₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error= missings.MissingValue)
+         Temp₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Temp₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+         TempSoil₀, 🎏_DataMissing         = read.FINDING_9999(;Input=TempSoil₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+         Wind₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Wind₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+
+         Pet_Obs, ~                        = read.FINDING_9999(;Input=Pet_Obs, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+
+				# If <🎏_DataMissing> = true but it is during night time, we can assume that SolarRadiation is close to 0 and therefore we can remove data missing and assume SolarRadiation₀ = 0.0 and it does not matter of the values of the others variables
+				iiMissing = 0
+				for iT=1:Nmeteo
+					if 🎏_DataMissing[iT]
+
+						🎏_Daylight, T_Hour, Tsunrise, Tsunrise = evapoFunc.radiation.SUNLIGHT_HOURS(;DateTimeMinute=DayHour[iT], param.Latitude, param.Longitude, param.Z_Altitude)
+
+						if !(🎏_Daylight)
+							🎏_DataMissing[iT] = false
+						else
+							iiMissing += 1
+						end # if !(🎏_Daylight[iT])
+
+					end # if 🎏_DataMissing[iT]
+				end # for iT=1:Nmeteo
+				@warn "No of Missing data = $iiMissing"
+				println("")
 
 		# CONVERSION
 			for iT=1:Nmeteo
@@ -120,14 +161,14 @@ Read weather data from .csv
 	#		FUNCTION : FINDING_999
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	""" Linear intyerpolation between the missing data if not greater than 4 hours"""
-		function FINDING_9999(;Input, Nmeteo, DayHour, missings, 🎏_DataMissing, Error= -9999)
+		function FINDING_9999(;Input, Nmeteo, DayHour, missings, 🎏_DataMissing, Error= missings.MissingValue)
 			# Error_9999 = fill(false, N)
          NoValue_Istart = []
          NoValue_Iend   = []
          Error_Count = []
 
 			if Input[Nmeteo] == Error
-				error("Cannot interpolate if for it=N is -9999")
+				error("Cannot interpolate if for it=N is missings.MissingValue")
 			end
 
 			iError = 0
@@ -161,12 +202,11 @@ Read weather data from .csv
 
 				Intercept, Slope = interpolation.POINTS_2_SlopeIntercept(X1, Y1, X2, Y2)
 
-				for iT =NoValue_Istart[iError]:NoValue_Iend[iError]
+				for iT = NoValue_Istart[iError]:NoValue_Iend[iError]
 				 	Input[iT] = Slope * Float64(iT) + Intercept
 
 					if missings.ΔTmax_Missing < ΔT_Error
 						🎏_DataMissing[iT] = true
-						@show 🎏_DataMissing[iT]
 					end # if missings.ΔTmax_Missing < ΔT_Error
 
 				end # for iT =NoValue_Istart[iError]:NoValue_Iend[iError]

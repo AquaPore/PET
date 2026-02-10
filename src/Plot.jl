@@ -30,16 +30,16 @@ module plot
 
 					Axis_3.xticks = (X_Ticks, string.(Time_Dates))
 					hidexdecorations!(Axis_3, grid=false, ticks=true, ticklabels=true)
-					lines!(Axis_3, 1:1:Nmeteo_Reduced, ∑Pet_Obs_Reduced, linewidth=1, color=:red, label= L"$∑PET_{Obs}$ $[mm]$")
-					lines!(Axis_3, 1:1:Nmeteo_Reduced,  ∑Pet_Sim_Reduced, linewidth=1, color=:blue, label= L"$∑PET_{Sim}$ $[mm]$")
+					lines!(Axis_3, 1:1:Nmeteo_Reduced, ∑Pet_Obs_Reduced, linewidth=2, color=:red, label= L"$∑PET_{Obs}$ $[mm]$")
+					lines!(Axis_3, 1:1:Nmeteo_Reduced,  ∑Pet_Sim_Reduced, linewidth=2, color=:blue, label= L"$∑PET_{Sim}$ $[mm]$")
 				end
 
 			Axis_2 =  Axis(Fig[3, 1], yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$Date$ ", ylabel= L"$PET [mm]$ ", xgridvisible=false, ygridvisible=false, width=800, height=200, xticklabelrotation= π / 2.0)
 
 				Axis_2.xticks = (X_Ticks, string.(Time_Dates))
-				lines!(Axis_2, 1:1:Nmeteo_Reduced, Pet_Sim_Reduced, linewidth=1, color=:red, label= L"$PET_{Sim}$")
+				lines!(Axis_2, 1:1:Nmeteo_Reduced, Pet_Sim_Reduced, linewidth=2, color=:red, label= L"$PET_{Sim}$")
 				if flag.🎏_PetObs
-					lines!(Axis_2, 1:1:Nmeteo_Reduced, Pet_Obs_Reduced, linewidth=1, color=(:blue, 0.6), label= L"$PET_{Obs}$ ")
+					lines!(Axis_2, 1:1:Nmeteo_Reduced, Pet_Obs_Reduced, linewidth=2, color=(:blue, 0.6), label= L"$PET_{Obs}$ ")
 				end
 
 

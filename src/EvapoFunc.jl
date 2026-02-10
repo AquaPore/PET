@@ -296,6 +296,7 @@ module evapoFunc
 			end # ωₛ_SUNSET_HOUR_ANGLE
 		# ------------------------------------------------------------------
 
+
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		#		FUNCTION : DAY_NIGHT
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -510,17 +511,17 @@ module evapoFunc
 
 					T_Hour = Dates.hour(DateTime)
 
-				if Tsunset_Hour ≥ T_Hour ≥ Tsunrise_Hour
-					return G = SoilHeatFlux_Sunlight * ΔRadₙ
-				else
-					return G = SoilHeatFlux_Night * ΔRadₙ
-				end
-
-				# if 🎏_Daylight
+				# if Tsunset_Hour ≥ T_Hour ≥ Tsunrise_Hour
 				# 	return G = SoilHeatFlux_Sunlight * ΔRadₙ
 				# else
 				# 	return G = SoilHeatFlux_Night * ΔRadₙ
 				# end
+
+				if 🎏_Daylight
+					return G = SoilHeatFlux_Sunlight * ΔRadₙ
+				else
+					return G = SoilHeatFlux_Night * ΔRadₙ
+				end
 			end  # function: G_SOIL_HEAT_FLUX
 		# ------------------------------------------------------------------
 	end  # module: ground

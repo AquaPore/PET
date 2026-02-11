@@ -9,17 +9,17 @@ module read
 
 	Base.@kwdef mutable struct METEO
 		# Id
-      Id               :: Union{Missing,Vector}
+      Id               :: Vector{Int64}
 		# Humidity [0-1]
-      RelativeHumidity :: Union{Missing,Vector}
+      RelativeHumidity :: Vector{Float64}
 		# Solar radiation mean [ W/M⁻²]
-      SolarRadiation   :: Union{Missing,Vector}
+      SolarRadiation   :: Vector{Float64}
 		# Maximum temperature [⁰C]
-      Temp             :: Union{Missing,Vector}
+      Temp             :: Vector{Float64}
 		# Minimum temperature [⁰C]
-      TempSoil         :: Union{Missing,Vector}
+      TempSoil         :: Vector{Float64}
 		# Velocity of wind speed [M S⁻¹]
-      Wind             :: Union{Missing,Vector}
+      Wind             :: Vector{Float64}
 		# Data which are missing and which were artficially filled
       🎏_DataMissing   :: Vector{Bool}
 	end
@@ -27,23 +27,24 @@ module read
 Read weather data from .csv
 
 """
-	function READ_WEATHER(; date, path, flag, missings, param)
+	function READ_WEATHER(;date, path, flag, missings, param)
 
 		# READING DATA FROM CSV
 			Path_Input = joinpath(pwd(), path.Path_Input)
-			@assert isfile(Path_Input)
+				@assert isfile(Path_Input)
+
 			Data₀  = CSV.read(Path_Input, DataFrame; header=true)
 
-			Id₀     = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Id))
+			# Id₀     = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Id))
 			Year₀   = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Year))
 			Month₀  = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Month))
 			Day₀    = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Day))
 			Hour₀   = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Hour))
 			Minute₀ = convert(Vector{Int64}, Tables.getcolumn(Data₀, :Minute))
 
-			Nmeteo₀ = length(Year₀)
-
 			DayHour = Dates.DateTime.(Year₀, Month₀, Day₀, Hour₀, Minute₀) #  <"standard"> "proleptic_gregorian" calendar
+			Nmeteo₀ = length(Year₀)
+			Id₀ = collect(1:1:Nmeteo₀)
 
 			RelativeHumidity₀ = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("Humidity[%]")))
 			SolarRadiation₀   = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("SolarRadiation[W/m²]")))
@@ -56,37 +57,18 @@ Read weather data from .csv
 			else
 				Pet_Obs = zeros(Nmeteo₀)
 			end
-			# 🎏_DataMissing      = convert(Union{Vector,Missing}, Tables.getcolumn(Data₀, Symbol.("FlagMissing")))
 
 		# DETERMENING PERIOD OF INTEREST
 			DateTrue = fill(false, Nmeteo₀)
-			convert(Vector{Bool},DateTrue)
 			for iD=1:Nmeteo₀
 				if date.Id_Start ≤ iD ≤ date.Id_End
 					DateTrue[iD] = true
-				else
-					DateTrue[iD] = false
 				end
-			end
-
-			# The new number of data
-				Nmeteo = date.Id_End - date.Id_Start + 1
-
-		# TIME-STEP
-			ΔT = zeros(Float64, Nmeteo₀)
-			# Computing ΔT of the time step
-				for iT=date.Id_Start:date.Id_End
-					if iT ≥ 2
-						ΔT[iT] = Dates.value(DayHour[iT] - DayHour[iT-1]) / 1000
-						if ΔT[iT] < 600 || ΔT[iT] > 600
-							println("Dates issue=", iT, " = ",ΔT[iT])
-						end
-					end
-				end # for iT=1:Nmeteo
-				ΔT[1] = copy(ΔT[2])
+			end # for iD=1:Nmeteo₀
+			Nmeteo = sum(DateTrue)
 
 		# Reducing the data to the data of interest
-         ΔT                = ΔT[DateTrue]
+         Id₀               = Id₀[DateTrue]
          DayHour           = DayHour[DateTrue]
          RelativeHumidity₀ = RelativeHumidity₀[DateTrue]
          SolarRadiation₀   = SolarRadiation₀[DateTrue]
@@ -95,49 +77,71 @@ Read weather data from .csv
          Wind₀             = Wind₀[DateTrue]
          Pet_Obs           = Pet_Obs[DateTrue]
 
+		# TIME-STEP
+			ΔT = zeros(Float64, Nmeteo)
+			# Computing ΔT of the time step
+				for iT=1:Nmeteo
+					if iT ≥ 2
+						ΔT[iT] = Dates.value(DayHour[iT] - DayHour[iT-1]) / 1000
+					end
+				end # for iT=1:Nmeteo
+				ΔT[1] = copy(ΔT[2])
+
+				@assert minimum(ΔT)==maximum(ΔT)
+
+			# Wind₀ .= 0.0
+			# SolarRadiation₀ .= 66.97
+			# Temp₀ .= 10.41
+			# RelativeHumidity₀ .= 69.09
+			# TempSoil₀ .= 0.0
+
 			# MISSING DATA: linear interpolation between the missing variables
-			🎏_DataMissing = fill(false, Nmeteo)
+				🎏_DataMissing = fill(false, Nmeteo)
+				SolarRadiation₀, 🎏_DataMissing   = read.FINDING_9999(;Input=SolarRadiation₀, DayHour, Nmeteo, missings,🎏_DataMissing, Error=missings.MissingValue)
 
-         SolarRadiation₀, 🎏_DataMissing   = read.FINDING_9999(;Input=SolarRadiation₀, DayHour, Nmeteo, missings,🎏_DataMissing, Error=missings.MissingValue)
+					# If <🎏_DataMissing> = true but it is during night time, we can assume that SolarRadiation is close to 0 and therefore we can remove data missing and assume SolarRadiation₀ = 0.0
+					for iT=1:Nmeteo
+						if 🎏_DataMissing[iT]
 
-				# If <🎏_DataMissing> = true but it is during night time, we can assume that SolarRadiation is close to 0 and therefore we can remove data missing and assume SolarRadiation₀ = 0.0
-				for iT=1:Nmeteo
-					if 🎏_DataMissing[iT]
+							🎏_Daylight = evapoFunc.radiation.SUNLIGHT_HOURS(;DateTimeMinute=DayHour[iT], param.Latitude, param.Longitude, param.Z_Altitude)
 
-						🎏_Daylight, T_Hour, Tsunrise, Tsunrise = evapoFunc.radiation.SUNLIGHT_HOURS(;DateTimeMinute=DayHour[iT], param.Latitude, param.Longitude, param.Z_Altitude)
+							if !(🎏_Daylight)
+								SolarRadiation₀[iT] = min(SolarRadiation₀[iT], 10.0)
+								🎏_DataMissing[iT] = false
+							end # if !(🎏_Daylight[iT])
 
-						if !(🎏_Daylight)
-							SolarRadiation₀[iT] = min(SolarRadiation₀[iT], 10.0)
-							🎏_DataMissing[iT] = false
-						end # if !(🎏_Daylight[iT])
+						end # if 🎏_DataMissing[iT]
+					end # for iT=1:Nmeteo
 
-					end # if 🎏_DataMissing[iT]
-				end # for iT=1:Nmeteo
+				RelativeHumidity₀, 🎏_DataMissing = read.FINDING_9999(;Input=RelativeHumidity₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error= missings.MissingValue)
+				Temp₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Temp₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+				TempSoil₀, 🎏_DataMissing         = read.FINDING_9999(;Input=TempSoil₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+				Wind₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Wind₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
 
-			RelativeHumidity₀, 🎏_DataMissing = read.FINDING_9999(;Input=RelativeHumidity₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error= missings.MissingValue)
-         Temp₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Temp₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
-         TempSoil₀, 🎏_DataMissing         = read.FINDING_9999(;Input=TempSoil₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
-         Wind₀, 🎏_DataMissing             = read.FINDING_9999(;Input=Wind₀, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+				if flag.🎏_PetObs
+					🎏_DataMissing_PetObs = fill(false, Nmeteo)
+					Pet_Obs, 🎏_DataMissing_PetObs                        = read.FINDING_9999(;Input=Pet_Obs, DayHour, Nmeteo, missings, 🎏_DataMissing=🎏_DataMissing_PetObs, Error=missings.MissingValue)
+				end
 
-         Pet_Obs, ~                        = read.FINDING_9999(;Input=Pet_Obs, DayHour, Nmeteo, missings, 🎏_DataMissing, Error=missings.MissingValue)
+					# If <🎏_DataMissing> = true but it is during night time, we can assume that SolarRadiation is close to 0 and therefore we can remove data missing and assume SolarRadiation₀ = 0.0 and it does not matter of the values of the others variables
+					iiMissing = 0
+					for iT=1:Nmeteo
+						if 🎏_DataMissing[iT]
 
-				# If <🎏_DataMissing> = true but it is during night time, we can assume that SolarRadiation is close to 0 and therefore we can remove data missing and assume SolarRadiation₀ = 0.0 and it does not matter of the values of the others variables
-				iiMissing = 0
-				for iT=1:Nmeteo
-					if 🎏_DataMissing[iT]
+							🎏_Daylight = evapoFunc.radiation.SUNLIGHT_HOURS(;DateTimeMinute=DayHour[iT], param.Latitude, param.Longitude, param.Z_Altitude)
 
-						🎏_Daylight, T_Hour, Tsunrise, Tsunrise = evapoFunc.radiation.SUNLIGHT_HOURS(;DateTimeMinute=DayHour[iT], param.Latitude, param.Longitude, param.Z_Altitude)
+							if !(🎏_Daylight)
+								🎏_DataMissing[iT] = false
+							else
+								iiMissing += 1
+							end # if !(🎏_Daylight[iT])
 
-						if !(🎏_Daylight)
-							🎏_DataMissing[iT] = false
-						else
-							iiMissing += 1
-						end # if !(🎏_Daylight[iT])
-
-					end # if 🎏_DataMissing[iT]
-				end # for iT=1:Nmeteo
-				@warn "No of Missing data = $iiMissing"
-				println("")
+						end # if 🎏_DataMissing[iT]
+					end # for iT=1:Nmeteo
+					if iiMissing ≥ 1
+						@warn "No of Missing data = $iiMissing"
+						println("")
+					end
 
 		# CONVERSION
 			for iT=1:Nmeteo
@@ -145,7 +149,9 @@ Read weather data from .csv
 					RelativeHumidity₀[iT] = RelativeHumidity₀[iT] / 100.0
 
 				# Removing negative values
+				if flag.🎏_PetObs
 					Pet_Obs[iT] = max(Pet_Obs[iT], 0.0)
+				end
 
 				# Solar radiation filter
 					SolarRadiation₀[iT] = max(SolarRadiation₀[iT] - 0.1, 0.0)

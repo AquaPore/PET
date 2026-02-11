@@ -21,30 +21,30 @@ module plot
 
 
 			if flag.🎏_PetObs
-				Axis_1 =  Axis(Fig[1, 1], title= " Penman-Monteith $(output.ΔT_Output) second",  yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$PET_{Sim}$ $[mm]$", ylabel= L"$PET_{Obs}$ $[mm]$", xgridvisible=false, ygridvisible=false, width=400, height=400)
+				Axis_1 =  Axis(Fig[1, 1], title= " Penman-Monteith ΔTstep= $(output.ΔT_Output) seconds",  yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$PET_{Sim}$ $[mm]$", ylabel= L"$PET_{Obs}$ $[mm]$", xgridvisible=false, ygridvisible=false, width=400, height=400)
 
 				scatter!(Axis_1, Pet_Sim_Reduced, Pet_Obs_Reduced, color=:blue)
 				lines!(Axis_1, Line, Line, color=:grey, linestyle=:dash, linewidth=2)
 
-				Axis_3 =  Axis(Fig[2, 1], title= " Penman-Monteith $(output.ΔT_Output) second", yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$Date$ ", ylabel= L"$ ∑PET [mm]$ ", xgridvisible=false, ygridvisible=false, width=800, height=200, xticklabelrotation= π / 2.0)
+				Axis_2 =  Axis(Fig[2, 1], title= " Penman-Monteith  ΔTstep= $(output.ΔT_Output) second", yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$Date$ ", ylabel= L"$ ∑PET [mm]$ ", xgridvisible=false, ygridvisible=false, width=800, height=200, xticklabelrotation= π / 2.0)
 
-					Axis_3.xticks = (X_Ticks, string.(Time_Dates))
-					hidexdecorations!(Axis_3, grid=false, ticks=true, ticklabels=true)
-					lines!(Axis_3, 1:1:Nmeteo_Reduced, ∑Pet_Obs_Reduced, linewidth=2, color=:red, label= L"$∑PET_{Obs}$ $[mm]$")
-					lines!(Axis_3, 1:1:Nmeteo_Reduced,  ∑Pet_Sim_Reduced, linewidth=2, color=:blue, label= L"$∑PET_{Sim}$ $[mm]$")
+					Axis_2.xticks = (X_Ticks, string.(Time_Dates))
+					hidexdecorations!(Axis_2, grid=false, ticks=true, ticklabels=true)
+					lines!(Axis_2, 1:1:Nmeteo_Reduced, ∑Pet_Obs_Reduced, linewidth=2, color=:red, label= L"$∑PET_{Obs}$ $[mm]$")
+					lines!(Axis_2, 1:1:Nmeteo_Reduced,  ∑Pet_Sim_Reduced, linewidth=2, color=:blue, label= L"$∑PET_{Sim}$ $[mm]$")
 				end
 
-			Axis_2 =  Axis(Fig[3, 1], yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$Date$ ", ylabel= L"$PET [mm]$ ", xgridvisible=false, ygridvisible=false, width=800, height=200, xticklabelrotation= π / 2.0)
+			Axis_3 =  Axis(Fig[3, 1], yticklabelcolor=:black, yaxisposition=:left, rightspinecolor=:black, ytickcolor=:black, xlabel= L"$Date$ ", ylabel= L"$PET [mm]$ ", xgridvisible=false, ygridvisible=false, width=800, height=200, xticklabelrotation= π / 2.0)
 
-				Axis_2.xticks = (X_Ticks, string.(Time_Dates))
-				lines!(Axis_2, 1:1:Nmeteo_Reduced, Pet_Sim_Reduced, linewidth=2, color=:red, label= L"$PET_{Sim}$")
+				Axis_3.xticks = (X_Ticks, string.(Time_Dates))
+
 				if flag.🎏_PetObs
-					lines!(Axis_2, 1:1:Nmeteo_Reduced, Pet_Obs_Reduced, linewidth=2, color=(:blue, 0.6), label= L"$PET_{Obs}$ ")
+					lines!(Axis_3, 1:1:Nmeteo_Reduced, Pet_Obs_Reduced, linewidth=2, color=(:blue, 0.6), label= L"$PET_{Obs}$ ")
 				end
 
+				lines!(Axis_3, 1:1:Nmeteo_Reduced, Pet_Sim_Reduced, linewidth=2, color=:red, label= L"$PET_{Sim}$")
 
-
-			Leg = Legend(Fig[4,1], Axis_2, framevisible=true, tellheight=true, tellwidth=true, labelsize=25, nbanks=2)
+			Leg = Legend(Fig[4,1], Axis_3, framevisible=true, tellheight=true, tellwidth=true, labelsize=25, nbanks=2)
 
 			colgap!(Fig.layout, 15)
 			rowgap!(Fig.layout, 15)
@@ -53,7 +53,7 @@ module plot
 			display(Fig)
 
 			Path_Output = joinpath(pwd(), path.Path_Output_Plot)
-			save(Path_Output, Fig)
+			CairoMakie.save(Path_Output, Fig)
 			println("			 ~ ", Path_Output, "~")
 
 		return nothing

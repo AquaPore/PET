@@ -79,7 +79,7 @@ module interpolation
 				Pet_Obs_Reduced[iT_Reduced] = ∑Pet_Obs_Reduced[iT_Reduced] - ∑Pet_Obs_Reduced[iT_Reduced-1]
 			end
 
-		return ∑Pet_Obs_Reduced, ∑Pet_Sim_Reduced, ∑T_Obs, ∑T_Reduced, DayHour_Reduced, Nmeteo_Reduced, Pet_Obs_Reduced, Pet_Sim_Reduced
+		return ∑Pet_Obs_Reduced, ∑Pet_Sim_Reduced, DayHour_Reduced, Nmeteo_Reduced, Pet_Obs_Reduced, Pet_Sim_Reduced
 		end  # function: TIMESETP
 	# ------------------------------------------------------------------
 

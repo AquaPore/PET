@@ -12,7 +12,7 @@ module evapoFunc
 		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			function PET_PENMAN_MONTEITH_HOURLY(;Kc, Cₚ, Eₐ, Eₛ, G, Rₐ_Inv, ΔRadₙ, Rₛ, γ, Δ, λᵥ, ρₐᵢᵣ, ΔT₁, ρwater)
 
-				ETₒ =  Kc *  (Δ * (ΔRadₙ - G) + ρₐᵢᵣ * Cₚ * (Eₛ - Eₐ) * Rₐ_Inv ) / ((Δ + γ * (1.0 + Rₛ * Rₐ_Inv)) * λᵥ * ρwater)
+				ETₒ =  Kc *  (Δ * (ΔRadₙ - G) + ρₐᵢᵣ * Cₚ * max(Eₛ - Eₐ, 0.0) * Rₐ_Inv ) / ((Δ + γ * (1.0 + Rₛ * Rₐ_Inv)) * λᵥ * ρwater)
 
 				# convert from [m J m-2 second⁻¹] ➡ [mm J m-2 ΔT⁻¹]
 				ETₒ = max(ETₒ, 0.0) * ΔT₁ * 1000.0
@@ -323,7 +323,7 @@ module evapoFunc
 
 				# println("$T_Hour $Tmonth $Tsunrise_Hour $Tsunset_Hour $🎏_Daylight")
 
-			return 🎏_Daylight, T_Hour, Tsunrise, Tsunrise
+			return 🎏_Daylight
 			end  # function: SUNLIGHT_HOURS
 		# ------------------------------------------------------------------
 
@@ -362,27 +362,28 @@ module evapoFunc
 
 				HourFraction = min(ΔT₁ / (60.0 * 60.0), 1.0)
 
-				Obs = Observer(Latitude, Longitude, Z_Altitude)
+				# Obs = Observer(Latitude, Longitude, Z_Altitude)
 
-				TimeZone = TimeZones.TimeZone("Europe/London")
-				ZoneDateTimes_Days = ZonedDateTime(Dates.year(DateTimeMinute), Dates.month(DateTimeMinute), Dates.day(DateTimeMinute), TimeZone)
+				# TimeZone = TimeZones.TimeZone("Europe/London")
+				# ZoneDateTimes_Days = ZonedDateTime(Dates.year(DateTimeMinute), Dates.month(DateTimeMinute), Dates.day(DateTimeMinute), TimeZone)
 
-				Positions = SolarPosition.solar_position(Obs, DateTimeMinute)
+				# Positions = SolarPosition.solar_position(Obs, DateTimeMinute)
 
-				SolarNoon = SolarPosition.Utilities.next_solar_noon(Obs,ZoneDateTimes_Days)
+				# SolarNoon = SolarPosition.Utilities.next_solar_noon(Obs,ZoneDateTimes_Days)
 
-				Positions_SolarNoon = SolarPosition.solar_position(Obs, SolarNoon, PSA(), HUGHES())
+				# Positions_SolarNoon = SolarPosition.solar_position(Obs, SolarNoon, PSA(), HUGHES())
 
-				ω_SolarTime = (Positions.azimuth - Positions_SolarNoon.azimuth) * π / 180.0
+				# ω_SolarTime = (Positions.azimuth - Positions_SolarNoon.azimuth) * π / 180.0
 
 				# else
-               # # Longitude_LocalTime       = 0. # [Degree] Longitude of the center of the local time Lz = 15.0 for senegal
-               # DayOfYear = Dates.dayofyear(DateTimeMinute)
-               # Hour      = Dates.hour(DateTimeMinute)
+               Longitude_LocalTime       = 0. # [Degree] Longitude of the center of the local time Lz = 15.0 for senegal
+               DayOfYear = Dates.dayofyear(DateTimeMinute)
+               Hour      = Dates.hour(DateTimeMinute)
 
-					# B  = 2 * π * (DayOfYear - 81) / 364
-					# Sc = 0.1645 * sin(2.0*B) - 0.1255 * cos(B) - 0.025 * sin(B)
-					# ω_SolarTime  = (((Hour + HourFraction) + 0.06667 * (Longitude_LocalTime - -Longitude) + Sc ) - 12.0) * π / 12.0
+					B  = 2 * π * (DayOfYear - 81) / 364
+					Sc = 0.1645 * sin(2.0*B) - 0.1255 * cos(B) - 0.025 * sin(B)
+					# ω_SolarTime  = (((Hour + 0.5) + 0.06667 * (Longitude_LocalTime - Longitude) + Sc ) - 12.0) * π / 12.0
+					ω_SolarTime  = (((Hour + HourFraction) + 0.06667 * (Longitude_LocalTime - -Longitude) + Sc ) - 12.0) * π / 12.0
 				# end
 
 				ω₁ = ω_SolarTime - π * HourFraction / 24.0
@@ -422,11 +423,10 @@ module evapoFunc
 				δ_SOLAR_INCLINATION(DayOfYear) = 0.409 * sin(DayOfYear * 2.0 * π / 365.0 - 1.39)
 					δ = δ_SOLAR_INCLINATION(DayOfYear)
 
-				ω₁, ω₂ = ω_SOLAR_TIME_ANGLE_HOUR(; DateTimeMinute, Latitude, Longitude, Z_Altitude, ΔT₁)
+				ω₁, ω₂ = radiation.ω_SOLAR_TIME_ANGLE_HOUR(;DateTimeMinute, Latitude, Longitude, Z_Altitude, ΔT₁)
 
 				Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear) = 1.0 + 0.033 * cos(DayOfYear * 2.0 * π / 365.0)
 					Dₑₛ = Dₑₛ_INVERSE_DISTANCE_SUN_EARTH(DayOfYear)
-
 
 					# 🎏_Daylight, T_Hour, Tsunrise, Tsunrise = radiation.SUNLIGHT_HOURS(;DateTimeMinute, Latitude, Longitude, Z_Altitude)
 
@@ -537,7 +537,7 @@ module evapoFunc
 		"""
 			function G_SOIL_HEAT_FLUX_HOURLY(;DateTimeMinute, Latitude, Longitude, ΔRadₙ, Z_Altitude, SoilHeatFlux_Sunlight, SoilHeatFlux_Night)
 
-				🎏_Daylight, ~, ~, ~ = radiation.SUNLIGHT_HOURS(;DateTimeMinute, Latitude, Longitude, Z_Altitude)
+				🎏_Daylight = radiation.SUNLIGHT_HOURS(;DateTimeMinute, Latitude, Longitude, Z_Altitude)
 
 				if 🎏_Daylight
 					return G = SoilHeatFlux_Sunlight * ΔRadₙ
@@ -550,23 +550,6 @@ module evapoFunc
 	end  # module: ground
 	# ............................................................
 
-	
-	# =============================================================
-	#		module: utils
-	# =============================================================
-	module utils
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		#		FUNCTION : LatitudeHourDegree
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		# 	function LATITUDE_DEGREE_HOUR_2_DEGREE(;Latitude_Minute, Latitude_ᴼ, Longitude_Minute, Longitude_ᴼ)
-		# 		Latitude = (Latitude_ᴼ + Latitude_Minute / 60.0)
-		# 		Longitude = (Longitude_ᴼ + Longitude_Minute / 60.0)
-		# 	return Latitude, Longitude
-		# end  # function: LatitudeDegree
-		# ------------------------------------------------------------------
-
-	end  # module: utils
-	# ............................................................
 
 end  # module: evapoFunc
 # ............................................................

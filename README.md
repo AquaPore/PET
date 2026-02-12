@@ -1,5 +1,7 @@
 [![Build Status](https://github.com/AquaPore/PET.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/AquaPore/PET.jl/actions/workflows/CI.yml?query=branch%3Amaster)
 
+\usepackage{amsmath}
+
 # POTENTIAL EVAPOTRANSPIRATION PENMAN MONTEITH FAO 56
 
 # For timestep less or equal than an hour
@@ -109,7 +111,8 @@ T_Kelvin = 273.15 # Conversion from C to Kelvin
 
 # MODEL
 
+The Penman-Monteith model is written as follow
 
-		$\ ETₒ =   (Δ * (ΔRadₙ - G) + ρₐᵢᵣ * Cₚ * max(Eₛ - Eₐ, 0.0) * Rₐ_Inv ) / ((Δ + γ * (1.0 + Rₛ * Rₐ_Inv)) * λᵥ * ρwater) $
-
-		$`\sqrt{3x-1}+(1+x)^2`$
+``` math
+ETₒ=\frac{\varDelta (\varDelta _{Radₙ}-G)+\frac{\rho _{ₐᵢᵣ}\,\,C_ₚ(Eₛ-Eₐ)}{Rₐ}}{\varDelta +\gamma \,\,\left( 1+\frac{Rₛ}{Rₐ} \right) \,\,\lambda _ᵥ\,\,\rho _{water}}
+```

@@ -19,7 +19,7 @@
 # Manifest.*
 # Project.*
 
-# Data
+
 # Data/*
 # *.[src/Data]
 # **/Data

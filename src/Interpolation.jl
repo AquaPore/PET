@@ -11,15 +11,15 @@ module interpolation
 		function TIME_INTERPOLATION(;Nmeteo, ΔT, Pet_Sim,  Pet_Obs, ΔT_Output, DayHour )
 
 			# Cumulating observed time
-				∑T_Obs   = fill(0.0::Float64, Nmeteo)
+				∑T   = fill(0.0::Float64, Nmeteo)
 				∑Pet_Sim = fill(0.0::Float64, Nmeteo)
 				∑Pet_Obs = fill(0.0::Float64, Nmeteo)
 
-				∑T_Obs[1] = 0
+				∑T[1] = 0
 				∑Pet_Sim[1] = Pet_Sim[1]
 				∑Pet_Obs[1] = Pet_Obs[1]
 				for iT = 2:Nmeteo
-					∑T_Obs[iT]   = ∑T_Obs[iT-1] + ΔT[iT]
+					∑T[iT]   = ∑T[iT-1] + ΔT[iT]
 					∑Pet_Sim[iT] = ∑Pet_Sim[iT-1] + Pet_Sim[iT]
 					∑Pet_Obs[iT] = ∑Pet_Obs[iT-1] + Pet_Obs[iT]
 				end
@@ -32,7 +32,7 @@ module interpolation
 
 				🎏Break = false
 				while !(🎏Break)
-					if ∑T_Reduced[end] + ΔT_Output > ∑T_Obs[end]
+					if ∑T_Reduced[end] + ΔT_Output > ∑T[end]
 						🎏Break = true
 						break
 					else
@@ -43,15 +43,28 @@ module interpolation
 				end # while
 				Nmeteo_Reduced = length(∑T_Reduced)
 
-			# interpolation data
-				∑Pet_Sim_Reduced = fill(0.0::Float64, Nmeteo_Reduced)
-				∑Pet_Obs_Reduced = fill(0.0::Float64, Nmeteo_Reduced)
+				∑Pet_Obs_Reduced, Pet_Obs_Reduced = LINEAR_INTERPOLATION(;∑T, ∑T_Reduced, ∑obs=∑Pet_Obs)
 
-				for iT_Reduced = 1:Nmeteo_Reduced
+				∑Pet_Sim_Reduced, Pet_Sim_Reduced = LINEAR_INTERPOLATION(;∑T, ∑T_Reduced, ∑obs=∑Pet_Sim)
+
+		return ∑Pet_Obs_Reduced, ∑Pet_Sim_Reduced, DayHour_Reduced, Nmeteo_Reduced, Pet_Obs_Reduced, Pet_Sim_Reduced
+		end  # function: TIMESETP
+	# ------------------------------------------------------------------
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	#		FUNCTION : LINEAR_INTERPOLATION
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		function LINEAR_INTERPOLATION(;∑T, ∑T_Reduced, ∑obs)
+			N = length(∑T)
+			Nreduced = length(∑T_Reduced)
+			∑obs_Reduced = fill(0.0::Float64, Nreduced)
+
+			for iT_Reduced = 1:Nreduced
 					iT_X = 2
 					🎏Break = false
 					while !(🎏Break)
-						if (∑T_Obs[iT_X-1] ≤ ∑T_Reduced[iT_Reduced] ≤ ∑T_Obs[iT_X]) || (iT_X == Nmeteo)
+						if (∑T[iT_X-1] ≤ ∑T_Reduced[iT_Reduced] ≤ ∑T[iT_X]) || (iT_X == N)
 							🎏Break = true
 							break
 						else
@@ -60,27 +73,20 @@ module interpolation
 						end # if
 					end # while
 
-				# Building a regression line which passes from POINT1(∑T_Obs[iT_X], ∑Pet_Sim[iT_Pr]) and POINT2: (∑T_Obs[iT_Pr+1], ∑Pet_Sim[iT_Pr+1])
-					Intercept, Slope = POINTS_2_SlopeIntercept(∑T_Obs[iT_X-1], ∑Pet_Sim[iT_X-1], ∑T_Obs[iT_X], ∑Pet_Sim[iT_X])
-					∑Pet_Sim_Reduced[iT_Reduced] = Slope * ∑T_Reduced[iT_Reduced] + Intercept
-
-					Intercept, Slope = POINTS_2_SlopeIntercept(∑T_Obs[iT_X-1], ∑Pet_Obs[iT_X-1], ∑T_Obs[iT_X], ∑Pet_Obs[iT_X])
-					∑Pet_Obs_Reduced[iT_Reduced] = Slope * ∑T_Reduced[iT_Reduced] + Intercept
+				# Building a regression line which passes from POINT1(∑T[iT_X], ∑Pet_Sim[iT_Pr]) and POINT2: (∑T[iT_Pr+1], ∑Pet_Sim[iT_Pr+1])
+					Intercept, Slope = POINTS_2_SlopeIntercept(∑T[iT_X-1], ∑obs[iT_X-1], ∑T[iT_X], ∑obs[iT_X])
+					∑obs_Reduced[iT_Reduced] = Slope * ∑T_Reduced[iT_Reduced] + Intercept
 			end # for iT = 1:Nmeteo_Reduced
 
-			Pet_Sim_Reduced = fill(0.0::Float64, Nmeteo_Reduced)
-			Pet_Sim_Reduced[1] = ∑Pet_Sim_Reduced[1]
+			Obs_Reduced = fill(0.0::Float64, Nreduced)
+			Obs_Reduced[1] = ∑obs_Reduced[1]
 
-			Pet_Obs_Reduced = fill(0.0::Float64, Nmeteo_Reduced)
-			Pet_Obs_Reduced[1] = ∑Pet_Obs_Reduced[1]
-
-			for iT_Reduced = 2:Nmeteo_Reduced
-				Pet_Sim_Reduced[iT_Reduced] = ∑Pet_Sim_Reduced[iT_Reduced] - ∑Pet_Sim_Reduced[iT_Reduced-1]
-				Pet_Obs_Reduced[iT_Reduced] = ∑Pet_Obs_Reduced[iT_Reduced] - ∑Pet_Obs_Reduced[iT_Reduced-1]
+			for iT_Reduced = 2:Nreduced
+				Obs_Reduced[iT_Reduced] = ∑obs_Reduced[iT_Reduced] - ∑obs_Reduced[iT_Reduced-1]
 			end
 
-		return ∑Pet_Obs_Reduced, ∑Pet_Sim_Reduced, DayHour_Reduced, Nmeteo_Reduced, Pet_Obs_Reduced, Pet_Sim_Reduced
-		end  # function: TIMESETP
+		return  ∑obs_Reduced, Obs_Reduced
+		end  # function: LINEAR_INTERPOLATION
 	# ------------------------------------------------------------------
 
 

@@ -3,6 +3,8 @@
 *.jl.cov
 *.jl.mem
 *.jl.*.mem
+*.ipynb
+*.vscode
 
 # pixi environments
 .pixi

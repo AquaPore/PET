@@ -16,8 +16,8 @@ module plot
 				Time_Dates = Date.(DayHour_Reduced[X_Ticks] )
 
 			# Activating the figure
-			CairoMakie.activate!(type="svg", pt_per_unit=1)
-			Fig = Figure(font="Sans", titlesize=30,  xlabelsize=20, ylabelsize=20, labelsize=30, fontsize=20)
+			CairoMakie.activate!(type="svg", pt_per_unit=0.5)
+			Fig = Figure(size = (600, 450), font="Sans", titlesize=30,  xlabelsize=20, ylabelsize=20, labelsize=30, fontsize=20)
 
 
 			if flag.🎏_PetObs

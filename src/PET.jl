@@ -154,5 +154,6 @@ module pet
 	#------------------------------------------------------------------
 end
 
-Path_Toml = raw"DATA\PARAMETER\PetOption.toml"
-DayHour, DayHour_Reduced, Pet_Obs, Pet_Obs_Reduced, Pet_Sim, Pet_Sim_Reduced = pet.RUN_PET(;Path_Toml, α=0.23);
+#include("src/PET.jl)
+# Path_Toml = raw"DATA\PARAMETER\PetOption.toml"
+# DayHour, DayHour_Reduced, Pet_Obs, Pet_Obs_Reduced, Pet_Sim, Pet_Sim_Reduced = pet.RUN_PET(;Path_Toml, α=0.23);

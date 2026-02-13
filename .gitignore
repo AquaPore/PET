@@ -4,14 +4,14 @@
 # *.jl.mem
 # *.jl.*.mem
 *.ipynb
-/vscode/
+/.vscode/
 
 # pixi environments
 
 
 # Joseph
 /Papers/
-.gitignore
+# .gitignore
 /Data/
 # Manifest.toml
 # Project.toml

@@ -3,38 +3,34 @@ include(raw"src\\PET.jl")
 """
 
 module pet
-	import Dates, CSV, Tables
-	using Suppressor, Logging
-	export RUN_PET
+	import Dates, CSV, Tables, DataFrames, Logging, Revise, Configurations, TOML, SolarPosition, TimeZones
 
-	@suppress begin
-		include("Read.jl")
-		include("Write.jl")
+
+	export PenmanMonteithHourly
+
+		include("Interpolation.jl")
 		include("ReadToml.jl")
 		include("PetFunc.jl")
-		include("Interpolation.jl")
 		include("Plot.jl")
-
-		global_logger(ConsoleLogger())
-
-		import ..interpolation, ..petFunc, ..petFunc, ..plot, ..read, ..write, ..readtoml
-		export RUN_POTENTIAL_EVAPOTRANSPIRATION
-	end
+		include("Write.jl")
+		include("Read.jl")
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#		FUNCTION : PET
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function PenmanMonteithHourly(;Path_Toml, α=-9999, Zaltitude=-99999)
+		function PenmanMonteithHourly(;Path_Toml, α=-9999, Zaltitude=-99999, Date_Start=[], Date_End=[])
 			printstyled("======= Start Running PET ========== \n", color=:red)
 			println(" ")
 
 			# Read TOML input file
-            Path_Toml₁  = joinpath(pwd(), Path_Toml)
+            Path_Toml₁ = joinpath(pwd(), Path_Toml)
             option     = readtoml.READTOML(Path_Toml₁)
 
-			# Default values in input and not from TOML
+			# Default values in input which overwrites TOML
 				if  α > 0.0 option.param.α = α end
 				if  Zaltitude > 0.0 option.param.Zaltitude=Zaltitude end
+				if !(isempty(Date_Start)) option.param.Date_Start=Date_Start end
+				if !(isempty(Date_End)) option.param.Date_End=Date_End end
 
 
 			# Reading CSV & filling up missing
@@ -154,6 +150,7 @@ module pet
 	#------------------------------------------------------------------
 end
 
-# include("src/PenmanMonteithHourly.jl)
+# include("src/PenmanMonteithHourly.jl")
 # Path_Toml = raw"DATA\PARAMETER\PetOption.toml"
-# DayHour, DayHour_Reduced, Pet_Obs, Pet_Obs_Reduced, Pet_Sim, Pet_Sim_Reduced = pet.RUN_POTENTIAL_EVAPOTRANSPIRATION(;Path_Toml, α=0.23);
+
+# DayHour, DayHour_Reduced, Pet_Obs, Pet_Obs_Reduced, Pet_Sim, Pet_Sim_Reduced = pet.PenmanMonteithHourly(;Path_Toml, α=0.23);

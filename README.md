@@ -46,10 +46,6 @@ Path_Output_Csv  = "DATA\\OUTPUT\\Timoleague_Pet_10minutes.csv"
 
 [date]
 
-# Id_Start = 1 # 1 167906
-
-# Id_End   = 279835 # 279835 257335
-
 Date_Start = [2020,10,1,0,0] # Starting date of simulation [Year, Month, Day, Hour, Minute]
 Date_End = [2026,1,26,7,0]   # Ending date of simulation [Year, Month, Day, Hour, Minute]
 [flag]

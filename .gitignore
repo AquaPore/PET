@@ -9,11 +9,11 @@
 # pixi environments
 
 
-# Joseph
+# # Joseph
 /Papers/
-# .gitignore
+# # .gitignore
 /Data/
-# Manifest.toml
+# # Manifest.toml
 # Project.toml
 # *.toml
 # Manifest.*

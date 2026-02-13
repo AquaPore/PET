@@ -18,13 +18,13 @@ module pet
 		global_logger(ConsoleLogger())
 
 		import ..interpolation, ..petFunc, ..petFunc, ..plot, ..read, ..write, ..readtoml
-		export RUN_PET
+		export RUN_POTENTIAL_EVAPOTRANSPIRATION
 	end
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#		FUNCTION : PET
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		function RUN_PET(;Path_Toml, α=-9999, Zaltitude=-99999)
+		function PenmanMonteithHourly(;Path_Toml, α=-9999, Zaltitude=-99999)
 			printstyled("======= Start Running PET ========== \n", color=:red)
 			println(" ")
 
@@ -154,6 +154,6 @@ module pet
 	#------------------------------------------------------------------
 end
 
-#include("src/PET.jl)
+# include("src/PenmanMonteithHourly.jl)
 # Path_Toml = raw"DATA\PARAMETER\PetOption.toml"
-# DayHour, DayHour_Reduced, Pet_Obs, Pet_Obs_Reduced, Pet_Sim, Pet_Sim_Reduced = pet.RUN_PET(;Path_Toml, α=0.23);
+# DayHour, DayHour_Reduced, Pet_Obs, Pet_Obs_Reduced, Pet_Sim, Pet_Sim_Reduced = pet.RUN_POTENTIAL_EVAPOTRANSPIRATION(;Path_Toml, α=0.23);

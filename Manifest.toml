@@ -1077,7 +1077,7 @@ weakdeps = ["StatsBase"]
 deps = ["CSV", "CairoMakie", "Configurations", "DataFrames", "Dates", "HTTP", "Logging", "Makie", "Revise", "SolarPosition", "Suppressor", "TOML", "Tables", "TimeZones", "Unitful", "ZipFile"]
 path = "."
 uuid = "818149cd-5caa-400d-8d3a-cc13d265cce7"
-version = "1.0.0"
+version = "0.0.1"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]

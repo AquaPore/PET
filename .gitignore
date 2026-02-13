@@ -1,32 +1,29 @@
 # Packaging stuff
-*.jl.*.cov
-*.jl.cov
-*.jl.mem
-*.jl.*.mem
+# *.jl.*.cov
+# *.jl.cov
+# *.jl.mem
+# *.jl.*.mem
 *.ipynb
 /vscode/
 
 # pixi environments
-.pixi
+
 
 # Joseph
 /Papers/
-/src/Data
-src/Data
-/docs/
 .gitignore
+/Data/
 # Manifest.toml
 # Project.toml
 # *.toml
-/Data/
 # Manifest.*
 # Project.*
-/Data
-Data
-Data/*
-*.[src/Data]
-**/Data
-# *.[.toml]
+
+# Data
+# Data/*
+# *.[src/Data]
+# **/Data
+# # *.[.toml]
 
 PET_Vscode.jl.code-workspace
 

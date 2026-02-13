@@ -2,9 +2,8 @@
 
 
 # **POTENTIAL EVAPOTRANSPIRATION PENMAN MONTEITH FAO 56**
-# *For timestep less or equal than an hour*
+# *For variable timestep less or equal than an hour*
 
-# F
 
 # PARTICULAR OF THIS SOFTWARE
 
